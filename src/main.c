@@ -341,8 +341,10 @@ static int HUD_AddEntity(int type, cl_entity_t *ent, const char *modelname)
             {
                 if(iTargetTeam != iTeam)
                 {
+                    ent->renderamt = 255;
+
                     model_t *pModel = gEngineStudio.GetModelByIndex(ent->modelindex);
-                    
+
                     const char *p = strstr(pModel->name, "models/player/");
                     if(p)
                     {
@@ -352,7 +354,7 @@ static int HUD_AddEntity(int type, cl_entity_t *ent, const char *modelname)
                         while(*p && *p != '/' && i < 63)
                             szModel[i++] = *p++;
                         szModel[i] = '\0';
-                        
+
                         if(i > 0)
                         {
                             player_info_t *pInfo = gEngineStudio.PlayerInfo(ent->index - 1);
