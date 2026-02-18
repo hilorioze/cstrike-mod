@@ -121,6 +121,7 @@ typedef struct
 {
     int (*MsgFunc_Money)(const char *pszName, int iSize, void *pbuf);
     int (*MsgFunc_ScoreInfo)(const char *pszName, int iSize, void *pbuf);
+    int (*MsgFunc_TeamInfo)(const char *pszName, int iSize, void *pbuf);
 } usermsg_func_t;
 
 typedef struct
@@ -325,6 +326,25 @@ static int MsgFunc_ScoreInfo(const char *pszName, int iSize, void *pbuf)
     return gUsermsgfuncs.MsgFunc_ScoreInfo(pszName, iSize, pbuf);
 }
 
+static int MsgFunc_TeamInfo(const char *pszName, int iSize, void *pbuf)
+{
+    unsigned char *buf = (unsigned char *)pbuf;
+    
+    int playerIndex = buf[0];
+    const char *teamName = (const char *)&buf[1];
+    
+    if(strcmp(teamName, "TERRORIST") == 0)
+        g_PlayerTeam[playerIndex] = TEAM_TERRORIST;
+    else if(strcmp(teamName, "CT") == 0)
+        g_PlayerTeam[playerIndex] = TEAM_CT;
+    else if(strcmp(teamName, "SPECTATOR") == 0 || strcmp(teamName, "UNASSIGNED") == 0)
+        g_PlayerTeam[playerIndex] = TEAM_SPECTATOR;
+    else
+        g_PlayerTeam[playerIndex] = TEAM_UNASSIGNED;
+    
+    return gUsermsgfuncs.MsgFunc_TeamInfo(pszName, iSize, pbuf);
+}
+
 static int HUD_AddEntity(int type, cl_entity_t *ent, const char *modelname)
 {
     if(ent->index > 0 && ent->index <= MAX_PLAYERS)
@@ -394,6 +414,13 @@ static int pfnHookUserMsg(const char *szMsgName, int (*pfn)(const char *, int, v
         gUsermsgfuncs.MsgFunc_ScoreInfo = pfn;
 
         return gEnginefuncs.pfnHookUserMsg(szMsgName, MsgFunc_ScoreInfo);
+    }
+
+    if(strcmp(szMsgName, "TeamInfo") == 0)
+    {
+        gUsermsgfuncs.MsgFunc_TeamInfo = pfn;
+
+        return gEnginefuncs.pfnHookUserMsg(szMsgName, MsgFunc_TeamInfo);
     }
 
     return gEnginefuncs.pfnHookUserMsg(szMsgName, pfn);
