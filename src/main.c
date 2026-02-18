@@ -126,7 +126,6 @@ typedef struct
 
 typedef struct
 {
-    int (*GL_LoadTexture2)(char *identifier, GL_TEXTURETYPE textureType, int width, int height, unsigned char *data, int mipmap, int iType, unsigned char *pPal, int filter);
     void (*Cbuf_AddFilteredText)(char *text);
     void (*CL_AddToResourceList)(resource_t *pResource, resource_t *pList);
 } hw_enginefunc_t;
@@ -249,20 +248,6 @@ static ISteamUser gSteamUserfuncs;
 #define TEAM_SPECTATOR 3
 
 static short g_PlayerTeam[MAX_PLAYERS + 1];
-
-__attribute__((visibility("default")))
-int GL_LoadTexture2(char *identifier, GL_TEXTURETYPE textureType, int width, int height, unsigned char *data, int mipmap, int iType, unsigned char *pPal, int filter)
-{
-    // https://github.com/ValveSoftware/halflife/issues/2234
-    if(textureType != GLT_SYSTEM)
-    {
-        gEnginefuncs.Con_DPrintf("GL_LoadTexture2: tt %d->%d \"%s\" %dx%d\n", textureType, GLT_WORLD, identifier, width, height);
-
-        textureType = GLT_WORLD;
-    }
-
-    return HW(GL_LoadTexture2)(identifier, textureType, width, height, data, mipmap, iType, pPal, filter);
-}
 
 static void CL_AddToResourceList(resource_t *pResource, resource_t *pList)
 {
