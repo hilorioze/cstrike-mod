@@ -293,7 +293,7 @@ __attribute__((visibility("default")))
 void Cbuf_AddFilteredText(char *text)
 {
     gEnginefuncs.Con_DPrintf("Cbuf_AddFilteredText: \"%.*s\"\n", (int)strcspn(text, "\n")/* length before \n, so command will be printed clean */, text);
-    
+
     HW(Cbuf_AddFilteredText)(text);
 }
 
@@ -322,17 +322,17 @@ static int MsgFunc_ScoreInfo(const char *pszName, int iSize, void *pbuf)
     unsigned char *buf = (unsigned char *)pbuf;
 
     g_PlayerTeam[buf[0]] = (short)(buf[7] | (buf[8] << 8));
-    
+
     return gUsermsgfuncs.MsgFunc_ScoreInfo(pszName, iSize, pbuf);
 }
 
 static int MsgFunc_TeamInfo(const char *pszName, int iSize, void *pbuf)
 {
     unsigned char *buf = (unsigned char *)pbuf;
-    
+
     int playerIndex = buf[0];
     const char *teamName = (const char *)&buf[1];
-    
+
     if(strcmp(teamName, "TERRORIST") == 0)
         g_PlayerTeam[playerIndex] = TEAM_TERRORIST;
     else if(strcmp(teamName, "CT") == 0)
@@ -341,7 +341,7 @@ static int MsgFunc_TeamInfo(const char *pszName, int iSize, void *pbuf)
         g_PlayerTeam[playerIndex] = TEAM_SPECTATOR;
     else
         g_PlayerTeam[playerIndex] = TEAM_UNASSIGNED;
-    
+
     return gUsermsgfuncs.MsgFunc_TeamInfo(pszName, iSize, pbuf);
 }
 
@@ -396,7 +396,7 @@ static int HUD_AddEntity(int type, cl_entity_t *ent, const char *modelname)
         ent->rendermode = kRenderTransAlpha;
         ent->renderamt = 75;
     }
-    
+
     return gClientfuncs.HUD_AddEntity(type, ent, modelname);
 }
 
@@ -405,10 +405,10 @@ static int pfnHookUserMsg(const char *szMsgName, int (*pfn)(const char *, int, v
     if(strcmp(szMsgName, "Money") == 0)
     {
         gUsermsgfuncs.MsgFunc_Money = pfn;
-        
+
         return gEnginefuncs.pfnHookUserMsg(szMsgName, MsgFunc_Money);
     }
-    
+
     if(strcmp(szMsgName, "ScoreInfo") == 0)
     {
         gUsermsgfuncs.MsgFunc_ScoreInfo = pfn;
@@ -477,7 +477,7 @@ void *SteamUser()
         MPROTECT_RWX(vtable);
 
         vtable->InitiateGameConnection = InitiateGameConnection;
-        
+
         MPROTECT_RX(vtable);
     }
 
@@ -505,7 +505,7 @@ void *dlsym(void *handle, const char *symbol)
 
     for(int i = 0; dlsym_hooks[i].name; i++)
     {
-        if(strcmp(symbol, dlsym_hooks[i].name)) 
+        if(strcmp(symbol, dlsym_hooks[i].name))
             continue;
 
         if(dlsym_hooks[i].lib && (!dladdr(ptr, &info) || !strstr(info.dli_fname, dlsym_hooks[i].lib)))

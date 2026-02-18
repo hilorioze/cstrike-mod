@@ -4,3 +4,8 @@ build/
 # Nix build artifacts
 result
 result-*
+
+# Development environment (auto-generated)
+.devenv*
+.direnv/
+/.pre-commit-config.yaml
