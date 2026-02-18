@@ -1,1 +1,6 @@
+# CMake build directory
 build/
+
+# Nix build artifacts
+result
+result-*
