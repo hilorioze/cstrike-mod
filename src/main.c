@@ -65,6 +65,8 @@ enum
     kRenderTransAlpha = 4,
 };
 
+#define OBS_NONE 0
+
 typedef struct
 {
     char name[64];
@@ -79,12 +81,14 @@ typedef struct
 typedef struct
 {
     int index;
-    char _pad0[724];
+    char _pad0[336];
+    int iuser1;
+    char _pad1[384];
     int modelindex;
-    char _pad1[28];
+    char _pad2[28];
     int rendermode;
     int renderamt;
-    char _pad2[2196];
+    char _pad3[2196];
     model_t *model;
 } cl_entity_t;
 
@@ -339,9 +343,13 @@ static int HUD_AddEntity(int type, cl_entity_t *ent, const char *modelname)
         {
             short iTeam = g_PlayerTeam[pLocal->index];
             short iTargetTeam = g_PlayerTeam[ent->index];
-            if(
-                iTeam != TEAM_SPECTATOR && iTeam != TEAM_UNASSIGNED
-                && iTargetTeam != TEAM_SPECTATOR && iTargetTeam != TEAM_UNASSIGNED
+
+            if(pLocal->iuser1 != OBS_NONE)
+            {
+                ent->renderamt = 255;
+            }
+            else if(
+                iTargetTeam != TEAM_SPECTATOR && iTargetTeam != TEAM_UNASSIGNED
             )
             {
                 if(iTargetTeam != iTeam)
