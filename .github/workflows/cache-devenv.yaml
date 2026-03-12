@@ -1,0 +1,46 @@
+on:
+  push:
+    branches:
+      - main
+
+    paths: &paths
+      - '.github/workflows/cache-devenv.yaml'
+
+      - 'devenv.nix'
+      - 'devenv.lock'
+
+  pull_request:
+    paths: *paths
+
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+  cancel-in-progress: false
+
+jobs:
+  build-devenv:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: cachix/install-nix-action@19effe9fe722874e6d46dd7182e4b8b7a43c4a99 # v31.10.0
+        with:
+          extra_nix_config: &extra_nix_config |
+            accept-flake-config = true
+
+      - uses: DeterminateSystems/magic-nix-cache-action@565684385bcd71bad329742eefe8d12f2e765b39 # v13
+
+      - uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
+        with:
+          name: hilorioze
+
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+          skipPush: ${{ github.event_name == 'pull_request' }}
+
+      - run: nix profile install nixpkgs#devenv
+
+      - run: devenv build

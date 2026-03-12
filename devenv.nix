@@ -5,6 +5,12 @@
   # keep-sorted end
   ...
 }: {
+  cachix.pull = [
+    # keep-sorted start
+    "hilorioze"
+    # keep-sorted end
+  ];
+
   scripts = {
     # keep-sorted start
     du.exec = "${lib.getExe pkgs.devenv} update";
@@ -21,27 +27,44 @@
     enable = true;
 
     config.programs = {
-      # keep-sorted start
-      deadnix.enable = true;
-      keep-sorted.enable = true;
-      # keep-sorted end
-    };
+      # keep-sorted start block=yes newline_separated=yes
+      alejandra = {
+        enable = true;
 
-    config.settings.formatter.alejandra = {
-      command = lib.getExe pkgs.alejandra;
-      includes = [
-        # keep-sorted start
-        "*.nix"
-        # keep-sorted end
-      ];
+        priority = 100;
+      };
+
+      deadnix.enable = true;
+
+      keep-sorted.enable = true;
+
+      statix.enable = true;
+      # keep-sorted end
     };
   };
 
   git-hooks.hooks = {
-    # keep-sorted start
+    # keep-sorted start block=yes newline_separated=yes
+    check-merge-conflicts = {
+      enable = true;
+
+      fail_fast = true; # abort immediately so treefmt never runs on conflicted files
+    };
+
     end-of-file-fixer.enable = true;
+
     mixed-line-endings.enable = true;
-    treefmt.enable = true;
+
+    treefmt = {
+      enable = true;
+
+      after = [
+        # keep-sorted start
+        "check-merge-conflicts"
+        # keep-sorted end
+      ];
+    };
+
     trim-trailing-whitespace.enable = true;
     # keep-sorted end
   };
