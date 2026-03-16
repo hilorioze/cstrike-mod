@@ -57,6 +57,8 @@
 
     mixed-line-endings.enable = true;
 
+    shellcheck.enable = true;
+
     treefmt = {
       enable = true;
 
