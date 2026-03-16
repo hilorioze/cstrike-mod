@@ -55,7 +55,16 @@
 
     flake-checker.enable = true;
 
-    mixed-line-endings.enable = true;
+    mixed-line-endings = {
+      enable = true;
+
+      args = [
+        # keep-sorted start
+        # force LF line endings
+        "--fix=lf"
+        # keep-sorted end
+      ];
+    };
 
     shellcheck.enable = true;
 
