@@ -53,6 +53,8 @@
 
     end-of-file-fixer.enable = true;
 
+    flake-checker.enable = true;
+
     mixed-line-endings.enable = true;
 
     treefmt = {
