@@ -15,4 +15,4 @@ trim_trailing_whitespace = true
 indent_size = 4
 
 [*.md]
-trim_trailing_whitespace = false
+trim_trailing_whitespace = false # preserve markdown hard linebreaks (https://github.github.com/gfm/#hard-line-break)

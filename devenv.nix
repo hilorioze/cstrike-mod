@@ -67,7 +67,15 @@
       ];
     };
 
-    trim-trailing-whitespace.enable = true;
+    trim-trailing-whitespace = {
+      enable = true;
+
+      args = [
+        # keep-sorted start
+        "--markdown-linebreak-ext=md" # preserve markdown hard linebreaks (https://github.github.com/gfm/#hard-line-break)
+        # keep-sorted end
+      ];
+    };
     # keep-sorted end
   };
 
