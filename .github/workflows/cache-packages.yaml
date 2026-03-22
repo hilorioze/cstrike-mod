@@ -20,6 +20,7 @@ on:
   workflow_dispatch:
 
 concurrency:
+  # one run per branch; latest completes last
   group: ${{ github.workflow }}-${{ github.ref }}
 
   cancel-in-progress: false
@@ -29,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
-      targets: ${{ steps.collect-targets.outputs.targets }}
+      packages: ${{ steps.collect-packages.outputs.packages }}
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -39,23 +40,21 @@ jobs:
           extra_nix_config: &extra_nix_config |
             accept-flake-config = true
 
-      - uses: DeterminateSystems/magic-nix-cache-action@565684385bcd71bad329742eefe8d12f2e765b39 # v13
-
-      - id: collect-targets
+      - id: collect-packages
         run: |
-          echo "targets=$(jq -cn \
+          echo "packages=$(jq -cn \
             --argjson systems "$(nix eval .#packages --apply builtins.attrNames --json)" \
             '{
               include: ($systems | map({target: "packages.\(.).default"}))
             }')" >> $GITHUB_OUTPUT
 
-  build-targets:
+  build-packages:
     needs: collect-targets
 
     runs-on: ubuntu-latest
 
     strategy:
-      matrix: ${{ fromJSON(needs.collect-targets.outputs.targets) }}
+      matrix: ${{ fromJSON(needs.collect-targets.outputs.packages) }}
 
       fail-fast: false
 

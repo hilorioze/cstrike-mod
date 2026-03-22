@@ -7,6 +7,7 @@ on:
       - '.github/workflows/cache-devenv.yaml'
 
       - 'devenv.nix'
+      - 'devenv.yaml'
       - 'devenv.lock'
 
   pull_request:
@@ -15,6 +16,7 @@ on:
   workflow_dispatch:
 
 concurrency:
+  # one run per branch; latest completes last
   group: ${{ github.workflow }}-${{ github.ref }}
 
   cancel-in-progress: false

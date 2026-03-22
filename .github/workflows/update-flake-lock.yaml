@@ -1,5 +1,3 @@
-name: Update Flake Lock
-
 on:
   schedule:
     # Run weekly on Mondays at 00:00 UTC
@@ -26,7 +24,7 @@ jobs:
 
       - uses: DeterminateSystems/update-flake-lock@834c491b2ece4de0bbd00d85214bb5e83b4da5c6 # v28
         with:
-          token: ${{ secrets.GH_TOKEN_FOR_UPDATES }}
+          token: ${{ secrets.FLAKE_UPDATE_GH_TOKEN }}
 
           pr-title: "chore(flake): update lock file"
           pr-assignees: hilorioze
