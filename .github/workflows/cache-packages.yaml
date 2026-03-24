@@ -65,7 +65,13 @@ jobs:
         with:
           extra_nix_config: *extra_nix_config
 
-      - uses: DeterminateSystems/magic-nix-cache-action@565684385bcd71bad329742eefe8d12f2e765b39 # v13
+      - uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7
+        with:
+          primary-key: packages-${{ matrix.target }}-${{ hashFiles('**/*.nix', '!devenv.nix', 'flake.lock') }}
+
+          restore-prefixes-first-match: |
+            packages-${{ matrix.target }}-
+            packages-
 
       - uses: cachix/cachix-action@1eb2ef646ac0255473d23a5907ad7b04ce94065c # v17
         with:
