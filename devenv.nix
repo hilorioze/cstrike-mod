@@ -5,12 +5,6 @@
   # keep-sorted end
   ...
 }: {
-  cachix.pull = [
-    # keep-sorted start
-    "hilorioze"
-    # keep-sorted end
-  ];
-
   scripts = {
     # keep-sorted start
     du.exec = "${lib.getExe pkgs.devenv} update";
