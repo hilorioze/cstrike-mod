@@ -1,5 +1,6 @@
 {
   # keep-sorted start
+  config,
   lib,
   pkgs,
   # keep-sorted end
@@ -11,7 +12,7 @@
     nfc.exec = "${lib.getExe pkgs.nix} flake check";
     nfl.exec = "${lib.getExe pkgs.nix} flake lock";
     nfu.exec = "${lib.getExe pkgs.nix} flake update";
-    ua.exec = "du && nfu";
+    ua.exec = "${lib.getExe config.scripts.du.scriptPackage} && ${lib.getExe config.scripts.nfu.scriptPackage}";
     # keep-sorted end
   };
 
