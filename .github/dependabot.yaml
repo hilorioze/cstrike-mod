@@ -8,9 +8,13 @@ updates:
     schedule:
       # Run weekly on Mondays at 00:00 UTC
       interval: weekly
+      day: monday
       time: "00:00"
 
-    open-pull-requests-limit: 99 # disable the default limit of 5 PRs
+    groups:
+      github-actions:
+        patterns:
+          - "*"
 
     assignees:
       - hilorioze
@@ -30,9 +34,13 @@ updates:
     schedule:
       # Run weekly on Mondays at 00:00 UTC
       interval: weekly
+      day: monday
       time: "00:00"
 
-    open-pull-requests-limit: 99 # disable the default limit of 5 PRs
+    groups:
+      nix:
+        patterns:
+          - "*"
 
     assignees:
       - hilorioze
