@@ -80,12 +80,6 @@
       };
   in
     flake-parts.lib.mkFlake {inherit inputs;} {
-      imports = [
-        # keep-sorted start
-        flake-parts.flakeModules.easyOverlay
-        # keep-sorted end
-      ];
-
       inherit systems;
 
       perSystem = {
@@ -102,9 +96,14 @@
 
         package = pkgs.callPackage cstrike-mod {};
       in {
-        overlayAttrs.cstrike-mod = package;
-
-        packages.default = package;
+        packages = {
+          # keep-sorted start
+          cstrike-mod = package;
+          default = package;
+          # keep-sorted end
+        };
       };
+
+      flake.overlays.default = _final: prev: inputs.self.packages.${prev.stdenv.hostPlatform.system} or {};
     };
 }
