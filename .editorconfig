@@ -14,5 +14,6 @@ trim_trailing_whitespace = true
 [*.c]
 indent_size = 4
 
+# preserve markdown hard linebreaks (https://github.github.com/gfm/#hard-line-break)
 [*.md]
-trim_trailing_whitespace = false # preserve markdown hard linebreaks (https://github.github.com/gfm/#hard-line-break)
+trim_trailing_whitespace = false

@@ -2,21 +2,25 @@
   # keep-sorted start
   config,
   lib,
-  pkgs,
   # keep-sorted end
   ...
 }: {
   scripts = {
     # keep-sorted start
-    du.exec = "${lib.getExe pkgs.devenv} update";
-    nfc.exec = "${lib.getExe pkgs.nix} flake check";
-    nfl.exec = "${lib.getExe pkgs.nix} flake lock";
-    nfu.exec = "${lib.getExe pkgs.nix} flake update";
+    du.exec = "devenv update";
+    nfc.exec = "nix flake check";
+    nfl.exec = "nix flake lock";
+    nfu.exec = "nix flake update";
     ua.exec = "${lib.getExe config.scripts.du.scriptPackage} && ${lib.getExe config.scripts.nfu.scriptPackage}";
     # keep-sorted end
   };
 
-  languages.c.enable = true;
+  languages = {
+    # keep-sorted start
+    c.enable = true;
+    nix.enable = true;
+    # keep-sorted end
+  };
 
   treefmt = {
     enable = true;
@@ -53,34 +57,28 @@
     mixed-line-endings = {
       enable = true;
 
-      args = [
-        # keep-sorted start
-        # force LF line endings
-        "--fix=lf"
-        # keep-sorted end
-      ];
+      # force LF line endings
+      args = ["--fix=lf"];
     };
 
-    shellcheck.enable = true;
+    shellcheck = {
+      enable = true;
+
+      # produces false positives on zsh
+      excludes = ["\\.zsh$"];
+    };
 
     treefmt = {
       enable = true;
 
-      after = [
-        # keep-sorted start
-        "check-merge-conflicts"
-        # keep-sorted end
-      ];
+      after = ["check-merge-conflicts"];
     };
 
     trim-trailing-whitespace = {
       enable = true;
 
-      args = [
-        # keep-sorted start
-        "--markdown-linebreak-ext=md" # preserve markdown hard linebreaks (https://github.github.com/gfm/#hard-line-break)
-        # keep-sorted end
-      ];
+      # preserve markdown hard linebreaks (https://github.github.com/gfm/#hard-line-break)
+      args = ["--markdown-linebreak-ext=md"];
     };
     # keep-sorted end
   };
@@ -88,14 +86,21 @@
   devcontainer = {
     enable = true;
 
-    settings.customizations.vscode.extensions = [
-      # keep-sorted start
-      "EditorConfig.EditorConfig"
-      "jnoortheen.nix-ide"
-      "mkhl.direnv"
-      "ms-vscode.cmake-tools"
-      "ms-vscode.cpptools"
-      # keep-sorted end
-    ];
+    settings = {
+      # cache /nix between rebuilds
+      mounts = ["source=devcontainer-nix,target=/nix,type=volume"];
+
+      onCreateCommand = "sudo sh -c 'echo \"accept-flake-config = true\" >> /etc/nix/nix.conf'";
+
+      customizations.vscode.extensions = [
+        # keep-sorted start
+        "EditorConfig.EditorConfig"
+        "jnoortheen.nix-ide"
+        "mkhl.direnv"
+        "ms-vscode.cmake-tools"
+        "ms-vscode.cpptools"
+        # keep-sorted end
+      ];
+    };
   };
 }

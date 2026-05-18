@@ -2,38 +2,33 @@
   nixConfig = {
     # keep-sorted start block=yes newline_separated=yes
     extra-substituters = [
-      "https://hilorioze.cachix.org"
+      # https://cache.nixos.org/ has priority 40
+      "https://attic.hilorioze.com/hilorioze?priority=41"
     ];
 
-    extra-trusted-public-keys = [
-      "hilorioze.cachix.org-1:klg5Lbxx5LWqiNhBVd7gN9o5nL90PKLrQTyJD8QJUAo="
-    ];
+    extra-trusted-public-keys = ["attic.hilorioze.com-hilorioze-1:vKKWGjVDgXl/TXbUWuPWTnDhhDit6hqkTcuoGfter5Y="];
     # keep-sorted end
   };
 
   inputs = {
-    # keep-sorted start
+    # keep-sorted start newline_separated=yes
     flake-parts.url = "github:hercules-ci/flake-parts";
+
+    nix-filter.url = "github:numtide/nix-filter";
     # keep-sorted end
 
-    # keep-sorted start
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    # keep-sorted end
   };
 
   outputs = inputs @ {
     # keep-sorted start
     flake-parts,
+    nix-filter,
     nixpkgs,
-    self,
     # keep-sorted end
     ...
   }: let
-    systems = [
-      # keep-sorted start
-      "i686-linux"
-      # keep-sorted end
-    ];
+    systems = ["i686-linux"];
 
     cstrike-mod = {
       # keep-sorted start
@@ -46,31 +41,29 @@
       stdenv.mkDerivation {
         pname = "cstrike-mod";
 
-        version = let
-          date = self.lastModifiedDate;
-        in "0-unstable-${lib.substring 0 4 date}-${lib.substring 4 2 date}-${lib.substring 6 2 date}";
+        version = "0";
 
-        src = ./.;
+        src = nix-filter.lib {
+          root = ./.;
 
-        nativeBuildInputs = [
-          # keep-sorted start
-          cmake
-          # keep-sorted end
-        ];
+          include = [
+            ./CMakeLists.txt
+            ./src
+          ];
+        };
+
+        nativeBuildInputs = [cmake];
 
         installPhase = ''
           runHook preInstall
 
-          mkdir -p $out/lib
-
-          cp libcstrike_mod.so $out/lib/
+          install -Dm444 libcstrike_mod.so $out/lib/libcstrike_mod.so
 
           runHook postInstall
         '';
 
         meta = {
           description = "Client-side modification library for Counter-Strike";
-
           homepage = "https://github.com/hilorioze/cstrike-mod";
 
           license = lib.licenses.unfree;
@@ -82,12 +75,7 @@
     flake-parts.lib.mkFlake {inherit inputs;} {
       inherit systems;
 
-      perSystem = {
-        # keep-sorted start
-        system,
-        # keep-sorted end
-        ...
-      }: let
+      perSystem = {system, ...}: let
         pkgs = import nixpkgs {
           inherit system;
 

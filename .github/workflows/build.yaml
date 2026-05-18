@@ -1,0 +1,84 @@
+on:
+  push:
+    branches:
+      - main
+
+    paths: &paths
+      - '.github/workflows/build.yaml'
+
+      - 'src/**/*.c'
+      - 'src/**/*.h'
+      - 'CMakeLists.txt'
+
+      - 'flake.nix'
+      - 'flake.lock'
+
+  pull_request:
+    paths: *paths
+
+  workflow_dispatch:
+
+concurrency:
+  # one run per branch; latest completes last
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
+        with:
+          extra_nix_config: &extra_nix_config |
+            accept-flake-config = true
+
+            max-substitution-jobs = 1024
+
+            http-connections = 0 # unlimited
+            download-buffer-size = 8388608 # 8 MiB
+
+            fsync-metadata = false # performance over durability in CI; store is transient
+
+      - if: github.event_name != 'pull_request'
+        run: |
+          nix profile add --inputs-from . nixpkgs#attic-client
+
+          attic login --set-default ${{ vars.ATTIC_CACHE }} ${{ vars.ATTIC_SERVER_URL }} ${{ secrets.ATTIC_TOKEN }}
+
+      - id: build
+        run: |
+          if [ "${{ github.event_name }}" != pull_request ]; then
+            # uploads built paths to the cache as they enter the store (like cachix daemon mode)
+            attic watch-store ${{ vars.ATTIC_CACHE }} & WATCH_PID=$!
+          fi
+
+          RESULT=$(nix build --no-link --print-out-paths --print-build-logs .#packages.i686-linux.default)
+          echo "result=$RESULT" >> $GITHUB_OUTPUT
+
+          if [ "${{ github.event_name }}" != pull_request ]; then
+            echo content_hash="$(nix hash path --type sha256 --base32 "$RESULT")" >> $GITHUB_OUTPUT
+
+            # ensure the full closure is pushed
+            kill $WATCH_PID; attic push ${{ vars.ATTIC_CACHE }} "$RESULT"
+          fi
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          path: ${{ steps.build.outputs.result }}/lib/libcstrike_mod.so
+
+          archive: false
+
+      - if: github.event_name != 'pull_request'
+        uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1.21.0
+        with:
+          tag: ${{ steps.build.outputs.content_hash }}
+          commit: ${{ github.sha }} # pin tag to build commit
+
+          artifacts: ${{ steps.build.outputs.result }}/lib/libcstrike_mod.so
+
+          makeLatest: true
+          skipIfReleaseExists: true
