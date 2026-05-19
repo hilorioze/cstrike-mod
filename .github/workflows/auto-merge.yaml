@@ -1,0 +1,39 @@
+on:
+  workflow_run:
+    workflows:
+      - .github/workflows/build.yaml
+
+    types:
+      - completed
+
+jobs:
+  merge:
+    if: github.event.workflow_run.conclusion == 'success'
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - env:
+          WORKFLOW_RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          pr_json=$(gh pr list \
+            --state open \
+            --base main \
+            --label automated \
+            --json author,headRefOid,isDraft,number \
+            --jq ".[] | select(.headRefOid == \"$WORKFLOW_RUN_HEAD_SHA\" and .isDraft == false and .author.login == \"dependabot[bot]\")" \
+            | jq -s '.[0]')
+
+          if [ "$pr_json" = null ]; then
+            echo "No pull request found for $WORKFLOW_RUN_HEAD_SHA"
+
+            exit 0
+          fi
+
+          pr_number=$(jq -r '.number' <<<"$pr_json")
+
+          gh pr merge --squash "$pr_number"
