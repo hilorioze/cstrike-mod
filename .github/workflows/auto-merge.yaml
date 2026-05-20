@@ -18,6 +18,7 @@ jobs:
 
     steps:
       - env:
+          GH_TOKEN: ${{ github.token }}
           WORKFLOW_RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           pr_json=$(gh pr list \
