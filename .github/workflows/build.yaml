@@ -39,11 +39,6 @@ jobs:
           extra_nix_config: &extra_nix_config |
             accept-flake-config = true
 
-            max-substitution-jobs = 1024
-
-            http-connections = 0 # unlimited
-            download-buffer-size = 8388608 # 8 MiB
-
             fsync-metadata = false # performance over durability in CI; store is transient
 
       - if: github.event_name != 'pull_request'
