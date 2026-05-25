@@ -19,10 +19,10 @@ on:
   workflow_dispatch:
 
 concurrency:
-  # one run per branch; latest completes last
+  # one run per ref; latest cancels older runs
   group: ${{ github.workflow }}-${{ github.ref }}
 
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
