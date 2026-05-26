@@ -25,11 +25,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    permissions:
-      contents: write
-
+  collect-substituters:
     runs-on: ubuntu-latest
+
+    outputs:
+      extra-substituters: ${{ steps.collect-substituters.outputs['extra-substituters'] }}
+      extra-trusted-public-keys: ${{ steps.collect-substituters.outputs['extra-trusted-public-keys'] }}
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -39,7 +40,31 @@ jobs:
           extra_nix_config: &extra_nix_config |
             accept-flake-config = true
 
+            # resolved by follow-up jobs via `*extra_nix_config`; empty strings are safe here
+            extra-substituters = ${{ needs.collect-substituters.outputs['extra-substituters'] }}
+            extra-trusted-public-keys = ${{ needs.collect-substituters.outputs['extra-trusted-public-keys'] }}
+
             fsync-metadata = false # performance over durability in CI; store is transient
+
+      - id: collect-substituters
+        run: |
+          echo "extra-substituters=$(nix eval --raw --file flake.nix --apply 'flake: builtins.concatStringsSep " " flake.nixConfig.extra-substituters')" >> $GITHUB_OUTPUT
+          echo "extra-trusted-public-keys=$(nix eval --raw --file flake.nix --apply 'flake: builtins.concatStringsSep " " flake.nixConfig.extra-trusted-public-keys')" >> $GITHUB_OUTPUT
+
+  build:
+    permissions:
+      contents: write
+
+    needs: collect-substituters
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
+        with:
+          extra_nix_config: *extra_nix_config
 
       - if: github.event_name != 'pull_request'
         run: |
