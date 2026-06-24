@@ -3,10 +3,10 @@
     # keep-sorted start block=yes newline_separated=yes
     extra-substituters = [
       # https://cache.nixos.org/ has priority 40
-      "https://nix-cache.hilorioze.com/hilorioze?priority=41"
+      "https://nix-cache.hilorioze.com?priority=41"
     ];
 
-    extra-trusted-public-keys = ["nix-cache.hilorioze.com-hilorioze-1:vKKWGjVDgXl/TXbUWuPWTnDhhDit6hqkTcuoGfter5Y="];
+    extra-trusted-public-keys = ["nix-cache.hilorioze.com-1:vKKWGjVDgXl/TXbUWuPWTnDhhDit6hqkTcuoGfter5Y="];
     # keep-sorted end
   };
 
