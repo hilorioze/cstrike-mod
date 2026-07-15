@@ -17,7 +17,7 @@
     nix-filter.url = "github:numtide/nix-filter";
     # keep-sorted end
 
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
   };
 
   outputs = inputs @ {
