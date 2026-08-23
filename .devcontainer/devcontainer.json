@@ -8,6 +8,9 @@
         "ms-vscode.cmake-tools",
         "ms-vscode.cpptools"
       ]
+    },
+    "zed": {
+      "extensions": []
     }
   },
   "image": "ghcr.io/cachix/devenv/devcontainer:latest",
