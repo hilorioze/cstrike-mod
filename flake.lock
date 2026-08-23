@@ -1,5 +1,22 @@
 {
   "nodes": {
+    "dobby": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1680055157,
+        "narHash": "sha256-ReS+TASsi4eHUgIYzv2hZ/+Ej4O6gwcr0j/CBMtlP8A=",
+        "owner": "jmpews",
+        "repo": "Dobby",
+        "rev": "b0176de574104726bb68dff3b77ee666300fc338",
+        "type": "github"
+      },
+      "original": {
+        "owner": "jmpews",
+        "repo": "Dobby",
+        "rev": "b0176de574104726bb68dff3b77ee666300fc338",
+        "type": "github"
+      }
+    },
     "flake-parts": {
       "inputs": {
         "nixpkgs-lib": "nixpkgs-lib"
@@ -15,21 +32,6 @@
       "original": {
         "owner": "hercules-ci",
         "repo": "flake-parts",
-        "type": "github"
-      }
-    },
-    "nix-filter": {
-      "locked": {
-        "lastModified": 1757882181,
-        "narHash": "sha256-+cCxYIh2UNalTz364p+QYmWHs0P+6wDhiWR4jDIKQIU=",
-        "owner": "numtide",
-        "repo": "nix-filter",
-        "rev": "59c44d1909c72441144b93cf0f054be7fe764de5",
-        "type": "github"
-      },
-      "original": {
-        "owner": "numtide",
-        "repo": "nix-filter",
         "type": "github"
       }
     },
@@ -66,8 +68,8 @@
     },
     "root": {
       "inputs": {
+        "dobby": "dobby",
         "flake-parts": "flake-parts",
-        "nix-filter": "nix-filter",
         "nixpkgs": "nixpkgs"
       }
     }

@@ -17,6 +17,23 @@
         "type": "github"
       }
     },
+    "dobby": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1680055157,
+        "narHash": "sha256-ReS+TASsi4eHUgIYzv2hZ/+Ej4O6gwcr0j/CBMtlP8A=",
+        "owner": "jmpews",
+        "repo": "Dobby",
+        "rev": "b0176de574104726bb68dff3b77ee666300fc338",
+        "type": "github"
+      },
+      "original": {
+        "owner": "jmpews",
+        "repo": "Dobby",
+        "rev": "b0176de574104726bb68dff3b77ee666300fc338",
+        "type": "github"
+      }
+    },
     "flake-compat": {
       "flake": false,
       "locked": {
@@ -93,6 +110,7 @@
     "root": {
       "inputs": {
         "devenv": "devenv",
+        "dobby": "dobby",
         "git-hooks": "git-hooks",
         "nixpkgs": "nixpkgs",
         "treefmt-nix": "treefmt-nix"

@@ -1,11 +1,21 @@
 inputs:
-  treefmt-nix:
-    url: github:numtide/treefmt-nix
-    inputs:
-      nixpkgs:
-        follows: nixpkgs
+  # keep-sorted start block=yes newline_separated=yes
+  dobby:
+    url: github:jmpews/Dobby/b0176de574104726bb68dff3b77ee666300fc338
+
+    flake: false
+
   git-hooks:
     url: github:cachix/git-hooks.nix
+
     inputs:
       nixpkgs:
         follows: nixpkgs
+
+  treefmt-nix:
+    url: github:numtide/treefmt-nix
+
+    inputs:
+      nixpkgs:
+        follows: nixpkgs
+  # keep-sorted end

@@ -11,10 +11,14 @@
   };
 
   inputs = {
-    # keep-sorted start newline_separated=yes
-    flake-parts.url = "github:hercules-ci/flake-parts";
+    # keep-sorted start block=yes newline_separated=yes
+    dobby = {
+      url = "github:jmpews/Dobby/b0176de574104726bb68dff3b77ee666300fc338";
 
-    nix-filter.url = "github:numtide/nix-filter";
+      flake = false;
+    };
+
+    flake-parts.url = "github:hercules-ci/flake-parts";
     # keep-sorted end
 
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
@@ -22,8 +26,8 @@
 
   outputs = inputs @ {
     # keep-sorted start
+    dobby,
     flake-parts,
-    nix-filter,
     nixpkgs,
     # keep-sorted end
     ...
@@ -33,7 +37,9 @@
     cstrike-mod = {
       # keep-sorted start
       cmake,
+      dobby,
       lib,
+      libGL,
       stdenv,
       # keep-sorted end
       ...
@@ -43,21 +49,29 @@
 
         version = "0";
 
-        src = nix-filter.lib {
+        src = lib.fileset.toSource {
           root = ./.;
 
-          include = [
+          fileset = lib.fileset.unions [
             ./CMakeLists.txt
+            ./dobby.nix
             ./src
           ];
         };
 
         nativeBuildInputs = [cmake];
 
+        buildInputs = [
+          # keep-sorted start
+          dobby
+          libGL
+          # keep-sorted end
+        ];
+
         installPhase = ''
           runHook preInstall
 
-          install -Dm444 libcstrike_mod.so $out/lib/libcstrike_mod.so
+          install -D --mode=444 libcstrike_mod.so $out/lib/libcstrike_mod.so
 
           runHook postInstall
         '';
@@ -66,7 +80,7 @@
           description = "Client-side modification library for Counter-Strike";
           homepage = "https://github.com/hilorioze/cstrike-mod";
 
-          license = lib.licenses.unfree;
+          license = lib.licenses.mit;
 
           platforms = systems;
         };
@@ -76,13 +90,11 @@
       inherit systems;
 
       perSystem = {system, ...}: let
-        pkgs = import nixpkgs {
-          inherit system;
+        pkgs = import nixpkgs {inherit system;};
 
-          config.allowUnfree = true;
-        };
+        dobbyPackage = pkgs.callPackage ./dobby.nix {src = dobby;};
 
-        package = pkgs.callPackage cstrike-mod {};
+        package = pkgs.callPackage cstrike-mod {dobby = dobbyPackage;};
       in {
         packages = {
           # keep-sorted start

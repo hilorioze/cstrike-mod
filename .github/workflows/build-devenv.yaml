@@ -7,8 +7,9 @@ on:
       - .github/workflows/build-devenv.yaml
 
       - devenv.nix
-      - devenv.lock
       - devenv.yaml
+      - devenv.lock
+      - dobby.nix
 
       # workflow reads `nixConfig` and uses `--inputs-from .`, so changes to them may affect the result
       - flake.nix
@@ -21,53 +22,36 @@ on:
 
   workflow_dispatch:
 
-concurrency:
-  # one run per ref; latest cancels older runs
-  group: ${{ github.workflow }}-${{ github.ref }}
-
-  cancel-in-progress: true
-
 jobs:
-  collect-substituters:
-    runs-on: ubuntu-latest
+  build-devenv:
+    concurrency:
+      # one run per pull request status; latest completes last
+      group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && 'pr' || 'non-pr' }}
 
-    outputs:
-      extra-substituters: ${{ steps.collect-substituters.outputs['extra-substituters'] }}
-      extra-trusted-public-keys: ${{ steps.collect-substituters.outputs['extra-trusted-public-keys'] }}
+      cancel-in-progress: false
+
+    permissions:
+      id-token: write # required so `niks3` can authenticate via OIDC
+
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
         with:
-          extra_nix_config: &extra_nix_config |
+          extra_nix_config: |
             accept-flake-config = true
-
-            # resolved by follow-up jobs via `*extra_nix_config`; empty strings are safe here
-            extra-substituters = ${{ needs.collect-substituters.outputs['extra-substituters'] }}
-            extra-trusted-public-keys = ${{ needs.collect-substituters.outputs['extra-trusted-public-keys'] }}
 
             fsync-metadata = false # performance over durability in CI; store is transient
 
-      - id: collect-substituters
-        run: |
-          echo "extra-substituters=$(nix eval --raw --file flake.nix --apply 'flake: builtins.concatStringsSep " " flake.nixConfig.extra-substituters')" >> $GITHUB_OUTPUT
-          echo "extra-trusted-public-keys=$(nix eval --raw --file flake.nix --apply 'flake: builtins.concatStringsSep " " flake.nixConfig.extra-trusted-public-keys')" >> $GITHUB_OUTPUT
-
-  build-devenv:
-    needs: collect-substituters
-
-    permissions:
-      id-token: write
-
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
-        with:
-          extra_nix_config: *extra_nix_config
+      - run: |
+          {
+            printf 'NIX_CONFIG<<EOF\n'
+            printf 'extra-substituters = %s\n' "$(nix eval --raw --file flake.nix --apply 'flake: builtins.concatStringsSep " " flake.nixConfig.extra-substituters')"
+            printf 'extra-trusted-public-keys = %s\n' "$(nix eval --raw --file flake.nix --apply 'flake: builtins.concatStringsSep " " flake.nixConfig.extra-trusted-public-keys')"
+            printf 'EOF\n'
+          } >> $GITHUB_ENV
 
       - if: github.event_name != 'pull_request'
         id: fetch-niks3-bin
@@ -115,10 +99,10 @@ jobs:
         with:
           niks3-bin: ${{ steps.fetch-niks3-bin.outputs.niks3_bin }}
 
-          server-url: ${{ vars.NIKS3_SERVER_URL }}
+          server-url: ${{ vars.NIKS3_SERVER }}
 
       # cache the built `fetch-niks3-bin` output so later runs can reuse it
       - if: github.event_name != 'pull_request'
-        run: ${{ steps.fetch-niks3-bin.outputs.niks3_bin }} push --server-url ${{ vars.NIKS3_SERVER_URL }} --auth-token-script "node $RUNNER_TEMP/niks3/fetch-oidc-token.mjs" ${{ steps.fetch-niks3-bin.outputs.niks3_root }}
+        run: ${{ steps.fetch-niks3-bin.outputs.niks3_bin }} push --server-url ${{ vars.NIKS3_SERVER }} --auth-token-script "node $RUNNER_TEMP/niks3/fetch-oidc-token.mjs" ${{ steps.fetch-niks3-bin.outputs.niks3_root }}
 
-      - run: nix run --inputs-from . nixpkgs#devenv -- build shell
+      - run: nix run --inputs-from . nixpkgs#devenv -- build test

@@ -1,14 +1,9 @@
-# CMake build directory
-build/
+# build artifacts
+/result
+/result-*
+/build/
 
-# Nix build artifacts
-result
-result-*
-
-# Development environment (auto-generated)
-.devenv*
-.direnv/
+# development environment (auto-generated)
+/.devenv/
+/.direnv/
 /.pre-commit-config.yaml
-
-# User-specific development environment overrides
-devenv.local.nix

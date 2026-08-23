@@ -1,24 +1,38 @@
 {
   # keep-sorted start
-  config,
-  lib,
+  inputs,
+  pkgs,
   # keep-sorted end
   ...
-}: {
-  scripts = {
-    # keep-sorted start
-    du.exec = "devenv update";
-    nfc.exec = "nix flake check";
-    nfl.exec = "nix flake lock";
-    nfu.exec = "nix flake update";
-    ua.exec = "${lib.getExe config.scripts.du.scriptPackage} && ${lib.getExe config.scripts.nfu.scriptPackage}";
-    # keep-sorted end
+}: let
+  dobby = pkgs.pkgsi686Linux.callPackage ./dobby.nix {src = inputs.dobby;};
+in {
+  env = {
+    CMAKE_PREFIX_PATH = dobby;
+    CPATH = "${dobby}/include:${pkgs.pkgsi686Linux.libGL.dev}/include";
   };
 
-  languages = {
+  packages = [
     # keep-sorted start
+    dobby
+    pkgs.clang-tools
+    pkgs.cmake
+    pkgs.pkgsi686Linux.glibc.dev
+    pkgs.pkgsi686Linux.libGL.dev
+    # keep-sorted end
+  ];
+
+  scripts.clangd-i686-gcc.exec = ''exec nix develop path:$DEVENV_ROOT#packages.i686-linux.default -c gcc "$@"'';
+
+  languages = {
+    # keep-sorted start block=yes newline_separated=yes
     c.enable = true;
-    nix.enable = true;
+
+    nix = {
+      enable = true;
+
+      lsp.package = pkgs.nil;
+    };
     # keep-sorted end
   };
 
@@ -33,6 +47,8 @@
         priority = 100;
       };
 
+      clang-format.enable = true;
+
       deadnix.enable = true;
 
       keep-sorted.enable = true;
@@ -42,43 +58,45 @@
     };
   };
 
-  git-hooks.hooks = {
+  git-hooks.hooks = let
+    ignoredShellcheckRules = [
+      # keep-sorted start
+      "SC2086" # unquoted variables; referenced are safe
+      "SC2162" # `read` without `-r`; intentional too, paths and stuff don't have backslashes
+      # keep-sorted end
+    ];
+  in {
     # keep-sorted start block=yes newline_separated=yes
+    actionlint = {
+      enable = true;
+
+      args = map (code: "-ignore=${code}") ignoredShellcheckRules;
+    };
+
     check-merge-conflicts = {
       enable = true;
 
       fail_fast = true; # abort immediately so treefmt never runs on conflicted files
     };
 
-    end-of-file-fixer.enable = true;
+    # use `.editorconfig` as the single source of truth for generic file normalization
+    eclint = {
+      enable = true;
+
+      types = ["text"];
+
+      # `eclint` only processes the first positional path, so let it discover tracked files itself
+      pass_filenames = false;
+
+      settings.fix = true;
+    };
 
     flake-checker.enable = true;
-
-    mixed-line-endings = {
-      enable = true;
-
-      # force LF line endings
-      args = ["--fix=lf"];
-    };
-
-    shellcheck = {
-      enable = true;
-
-      # produces false positives on zsh
-      excludes = ["\\.zsh$"];
-    };
 
     treefmt = {
       enable = true;
 
       after = ["check-merge-conflicts"];
-    };
-
-    trim-trailing-whitespace = {
-      enable = true;
-
-      # preserve markdown hard linebreaks (https://github.github.com/gfm/#hard-line-break)
-      args = ["--markdown-linebreak-ext=md"];
     };
     # keep-sorted end
   };
@@ -87,10 +105,10 @@
     enable = true;
 
     settings = {
-      # cache /nix between rebuilds
+      # cache `/nix` between rebuilds
       mounts = ["source=devcontainer-nix,target=/nix,type=volume"];
 
-      onCreateCommand = "sudo sh -c 'echo \"accept-flake-config = true\" >> /etc/nix/nix.conf'";
+      onCreateCommand = ''sudo sh -c 'printf "accept-flake-config = true\n" >> /etc/nix/nix.conf' '';
 
       customizations.vscode.extensions = [
         # keep-sorted start
@@ -103,4 +121,7 @@
       ];
     };
   };
+
+  # ensure generated files (like `.devcontainer/devcontainer.json`) exist before `treefmt` runs to prevent race conditions
+  tasks."devenv:treefmt:run".after = ["devenv:files"];
 }

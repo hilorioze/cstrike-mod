@@ -1,0 +1,7 @@
+BasedOnStyle: Google
+ColumnLimit: 100
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+IncludeIsMainRegex: '^$'

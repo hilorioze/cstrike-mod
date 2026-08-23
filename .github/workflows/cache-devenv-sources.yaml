@@ -1,44 +1,36 @@
 on:
   push:
-    branches: &branches
+    branches:
       - main
 
-    paths: &paths
-      - .github/workflows/build.yaml
+    paths:
+      - .github/workflows/cache-devenv-sources.yaml
 
-      - src/**
-      - CMakeLists.txt
-      - dobby.nix
+      - devenv.lock
 
       # workflow reads `nixConfig` and uses `--inputs-from .`, so changes to them may affect the result
       - flake.nix
       - flake.lock
 
-  pull_request:
-    branches: *branches
-
-    paths: *paths
-
   workflow_dispatch:
 
 jobs:
-  build:
+  cache-devenv-sources:
     concurrency:
-      # one run per ref; latest cancels older runs
+      # one cache upload per branch; latest completes last
       group: ${{ github.workflow }}-${{ github.ref }}
 
-      cancel-in-progress: true
+      cancel-in-progress: false
 
     permissions:
       id-token: write # required so `niks3` can authenticate via OIDC
-      contents: write # required for publishing releases
 
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+      - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
         with:
           extra_nix_config: |
             accept-flake-config = true
@@ -53,8 +45,7 @@ jobs:
             printf 'EOF\n'
           } >> $GITHUB_ENV
 
-      - if: github.event_name != 'pull_request'
-        id: fetch-niks3-bin
+      - id: fetch-niks3-bin
         run: |
           # `niks3-action` looks for `niks3-hook` next to `niks3`
           # `--inputs-from github:hilorioze/nixos-dotfiles` keeps CLI and server on the same version to avoid API mismatches
@@ -94,42 +85,49 @@ jobs:
 
           printf 'niks3_root=%s\nniks3_bin=%s\n' $niks3_root $niks3_root/bin/niks3 >> $GITHUB_OUTPUT
 
-      - if: github.event_name != 'pull_request'
-        uses: Mic92/niks3-action@12d3e320b2a99b7938f9634bd337cd9fec104609 # v1.1.0
+      - uses: Mic92/niks3-action@12d3e320b2a99b7938f9634bd337cd9fec104609 # v1.1.0
         with:
           niks3-bin: ${{ steps.fetch-niks3-bin.outputs.niks3_bin }}
 
           server-url: ${{ vars.NIKS3_SERVER }}
 
       # cache the built `fetch-niks3-bin` output so later runs can reuse it
-      - if: github.event_name != 'pull_request'
-        run: ${{ steps.fetch-niks3-bin.outputs.niks3_bin }} push --server-url ${{ vars.NIKS3_SERVER }} --auth-token-script "node $RUNNER_TEMP/niks3/fetch-oidc-token.mjs" ${{ steps.fetch-niks3-bin.outputs.niks3_root }}
+      - run: ${{ steps.fetch-niks3-bin.outputs.niks3_bin }} push --server-url ${{ vars.NIKS3_SERVER }} --auth-token-script "node $RUNNER_TEMP/niks3/fetch-oidc-token.mjs" ${{ steps.fetch-niks3-bin.outputs.niks3_root }}
 
-      - id: build
-        run: |
-          result=$(nix build --no-link --print-out-paths --print-build-logs .#packages.i686-linux.default)
+      - run: |
+          set -o pipefail
 
-          {
-            printf 'result=%s\n' $result
+          substituters=$(nix config show substituters)
 
-            if [[ ${{ github.event_name }} != pull_request ]]; then
-              printf 'content_hash=%s\n' "$(nix hash path --type sha256 --base32 $result)"
-            fi
-          } >> $GITHUB_OUTPUT
+          is_cached() {
+            local base_name=${1#/nix/store/}
+            local hash_part=${base_name%%-*}
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          path: ${{ steps.build.outputs.result }}/lib/libcstrike_mod.so
+            for substituter in $substituters; do
+              nix store path-from-hash-part --store $substituter $hash_part >/dev/null 2>&1 && return 0
+            done
 
-          archive: false
+            return 1
+          }
 
-      - if: github.event_name != 'pull_request'
-        uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1.21.0
-        with:
-          tag: ${{ steps.build.outputs.content_hash }}
-          commit: ${{ github.sha }} # pin release to the build commit
+          nix eval --raw --impure --expr '
+            let
+              lock = builtins.fromJSON (builtins.readFile ./devenv.lock);
 
-          artifacts: ${{ steps.build.outputs.result }}/lib/libcstrike_mod.so
+              fetchNode = _: node:
+                if node ? locked
+                then let
+                  cleanLocked = builtins.removeAttrs node.locked ["dir"];
+                in
+                  (builtins.fetchTree cleanLocked).outPath
+                else null;
 
-          makeLatest: true
-          skipIfReleaseExists: true
+              paths = builtins.filter (path: path != null) (builtins.attrValues (builtins.mapAttrs fetchNode lock.nodes));
+            in
+              builtins.concatStringsSep "\n" paths + "\n"
+          ' |
+            sort --unique |
+            while read path; do
+              is_cached $path || printf '%s\n' $path
+            done |
+            xargs --no-run-if-empty ${{ steps.fetch-niks3-bin.outputs.niks3_bin }} push --server-url ${{ vars.NIKS3_SERVER }} --auth-token-script "node $RUNNER_TEMP/niks3/fetch-oidc-token.mjs"

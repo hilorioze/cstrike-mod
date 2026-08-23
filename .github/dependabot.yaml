@@ -6,7 +6,7 @@ updates:
     directory: /
 
     schedule:
-      # Run weekly on Mondays at 00:00 UTC
+      # run weekly on mondays at 00:00 utc
       interval: weekly
       day: monday
       time: "00:00"
@@ -32,7 +32,7 @@ updates:
     directory: /
 
     schedule:
-      # Run weekly on Mondays at 00:00 UTC
+      # run weekly on mondays at 00:00 utc
       interval: weekly
       day: monday
       time: "00:00"
@@ -48,6 +48,7 @@ updates:
     labels:
       - dependencies
       - nix
+      - flake
       - automated
 
     commit-message:
