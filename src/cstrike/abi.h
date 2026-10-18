@@ -54,6 +54,8 @@
 #define WEAPON_KNIFE 29
 #define WEAPON_P90 30
 
+#define WPNSTATE_GLOCK18_BURST_MODE (1U << 1U)
+
 typedef struct {
   vec_t x;
   vec_t y;

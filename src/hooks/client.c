@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "cstrike/player_state.h"
+#include "features/autopistol.h"
 #include "features/autoreload.h"
 #include "features/bot.h"
 #include "features/buyammo.h"
@@ -216,14 +217,17 @@ int Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion) {
 void CL_CreateMove(float frametime, usercmd_t* cmd, int active) {
   gClientOrigFuncs.CL_CreateMove(frametime, cmd, active);
 
-  if (active)
+  if (active) {
+    AutoPistol_CreateMove(cmd);
     AutoReload_CreateMove(cmd);
+  }
 }
 
 void HUD_PostRunCmd(local_state_t* from, local_state_t* to, usercmd_t* cmd, int runfuncs,
                     double time, unsigned int random_seed) {
   gClientOrigFuncs.HUD_PostRunCmd(from, to, cmd, runfuncs, time, random_seed);
 
+  AutoPistol_OnPostRunCmd(to);
   AutoReload_OnPostRunCmd(to);
 }
 

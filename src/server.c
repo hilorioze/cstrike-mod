@@ -9,7 +9,7 @@
 enum {
   // NOLINTNEXTLINE(hicpp-signed-bitwise)
   kDefaultFeatures = kFeatureModelIndex | kFeaturePlayerTransparency | kFeaturePalletTransparency |
-                     kFeatureAutoReload,
+                     kFeatureAutoReload | kFeatureAutoPistol,
 };
 
 typedef struct {
