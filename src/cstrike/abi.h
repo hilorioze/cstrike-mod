@@ -7,7 +7,6 @@
 #define HITGROUP_HEAD 1
 
 #define MAX_PLAYERS 32
-#define MAX_SCOREBOARD_PLAYERS 64
 
 #define OBS_NONE 0
 #define OBS_CHASE_LOCKED 1

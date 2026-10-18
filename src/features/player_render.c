@@ -96,8 +96,7 @@ int PlayerRender_GetVisualPerspective(int* pTeam) {
       iObserverMode == OBS_IN_EYE || iObserverMode == OBS_MAP_CHASE) {
     int iObserverTarget = pLocal->curstate.iuser2;
     if (iObserverTarget > 0 && iObserverTarget <= MAX_PLAYERS) {
-      if (pTeam)
-        *pTeam = PlayerState_GetTeam(iObserverTarget);
+      *pTeam = PlayerState_GetTeam(iObserverTarget);
 
       return iObserverTarget;
     }
@@ -107,8 +106,7 @@ int PlayerRender_GetVisualPerspective(int* pTeam) {
     if (Scoreboard_IsPlayerDead(pLocal->index))
       return -1;
 
-    if (pTeam)
-      *pTeam = PlayerState_GetTeam(pLocal->index);
+    *pTeam = PlayerState_GetTeam(pLocal->index);
 
     return pLocal->index;
   }

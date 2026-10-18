@@ -134,22 +134,14 @@ static const char* PlayerInfo_ValueForKey(int playerNum, const char* key) {
   return Bot_OverridePlayerInfoValue(playerNum, key, value);
 }
 
-static int ResolveParsemsgFromModule(void* module) {
-  void (*pfnBeginRead)(void* buf, int size) = RealDlsym(module, "_Z10BEGIN_READPvi");
-  int (*pfnReadByte)(void) = RealDlsym(module, "_Z9READ_BYTEv");
-  int (*pfnReadLong)(void) = RealDlsym(module, "_Z9READ_LONGv");
-  const char* (*pfnReadString)(void) = RealDlsym(module, "_Z11READ_STRINGv");
+static void ResolveParsemsg(void* clientModule) {
+  parsemsg.BEGIN_READ = RealDlsym(clientModule, "_Z10BEGIN_READPvi");
+  parsemsg.READ_BYTE = RealDlsym(clientModule, "_Z9READ_BYTEv");
+  parsemsg.READ_LONG = RealDlsym(clientModule, "_Z9READ_LONGv");
+  parsemsg.READ_STRING = RealDlsym(clientModule, "_Z11READ_STRINGv");
 
-  if (pfnBeginRead && pfnReadByte && pfnReadLong && pfnReadString) {
-    parsemsg.BEGIN_READ = pfnBeginRead;
-    parsemsg.READ_BYTE = pfnReadByte;
-    parsemsg.READ_LONG = pfnReadLong;
-    parsemsg.READ_STRING = pfnReadString;
-
-    return 1;
-  }
-
-  return 0;
+  if (!parsemsg.BEGIN_READ || !parsemsg.READ_BYTE || !parsemsg.READ_LONG || !parsemsg.READ_STRING)
+    __builtin_trap();
 }
 
 static int IsCsldrProxy(void* module) {
@@ -187,11 +179,6 @@ static void* ResolveClientModule(void) {
   return clientOrigModule;
 }
 
-static void ResolveParsemsg(void* clientModule) {
-  if (!ResolveParsemsgFromModule(clientModule))
-    __builtin_trap();
-}
-
 int Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion) {
   void* clientModule = ResolveClientModule();
   ResolveParsemsg(clientModule);
@@ -205,11 +192,11 @@ int Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion) {
   pEnginefuncs->pfnGetPlayerInfo = pfnGetPlayerInfo;
   pEnginefuncs->PlayerInfo_ValueForKey = PlayerInfo_ValueForKey;
 
-  dlclose(clientModule);
-
   pEnginefuncs->pfnAddCommand("cstatus", CStatus_Command);
 
-  Scoreboard_Initialize();
+  Scoreboard_Initialize(clientModule);
+
+  dlclose(clientModule);
 
   return gClientOrigFuncs.Initialize(pEnginefuncs, iVersion);
 }

@@ -4,8 +4,6 @@
 #include <dobby.h>
 #include <link.h>
 #include <stdint.h>
-#include <stdio.h>
-#include <string.h>
 
 #include "codepatch.h"
 #include "cstrike/abi.h"
@@ -34,47 +32,22 @@ int Scoreboard_IsPlayerDead(int index) {
   return gScoreboardPlayerExtraInfo[index].dead;
 }
 
-static void ResolveScoreboardSymbols(void) {
-  Dl_info clientInfo;
-  if (!dladdr(gClientOrigFuncs.Initialize, &clientInfo))
-    __builtin_trap();
-
-  void* clientHandle = dlopen(clientInfo.dli_fname, RTLD_LAZY | RTLD_NOLOAD);
-  if (!clientHandle)
-    __builtin_trap();
-
-  if (!RealDlsym(clientHandle, "g_PlayerExtraInfo")) {
-    dlclose(clientHandle);
-
-    // under `csldr`, the VGUI scoreboard lives in adjacent `client_orig.so`
-    size_t clientDirectoryLength = strlen(clientInfo.dli_fname) - strlen("client.so");
-    char clientPath[clientDirectoryLength + sizeof("client_orig.so")];
-    // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling)
-    (void)snprintf(clientPath, sizeof(clientPath), "%.*sclient_orig.so", (int)clientDirectoryLength,
-                   clientInfo.dli_fname);
-
-    clientHandle = dlopen(clientPath, RTLD_LAZY | RTLD_NOLOAD);
-    if (!clientHandle)
-      __builtin_trap();
-  }
-
-  gScoreboardAddSection = RealDlsym(clientHandle, "_ZN25CCSClientScoreBoardDialog10AddSectionEii");
+static void ResolveScoreboardSymbols(void* clientModule) {
+  gScoreboardAddSection = RealDlsym(clientModule, "_ZN25CCSClientScoreBoardDialog10AddSectionEii");
   gScoreboardConstructor =
-      RealDlsym(clientHandle, "_ZN25CCSClientScoreBoardDialogC1EPN5vgui25PanelE");
+      RealDlsym(clientModule, "_ZN25CCSClientScoreBoardDialogC1EPN5vgui25PanelE");
   gScoreboardUpdateTeamInfo =
-      RealDlsym(clientHandle, "_ZN25CCSClientScoreBoardDialog14UpdateTeamInfoEv");
+      RealDlsym(clientModule, "_ZN25CCSClientScoreBoardDialog14UpdateTeamInfoEv");
   gScoreboardUpdateColumnInAllSections =
-      RealDlsym(clientHandle, "_ZN25CCSClientScoreBoardDialog25UpdateColumnInAllSectionsEPKcPKwib");
+      RealDlsym(clientModule, "_ZN25CCSClientScoreBoardDialog25UpdateColumnInAllSectionsEPKcPKwib");
   gScoreboardUpdatePlayerInfo =
-      RealDlsym(clientHandle, "_ZN25CCSClientScoreBoardDialog16UpdatePlayerInfoEv");
-  gScoreboardPlayerExtraInfo = RealDlsym(clientHandle, "g_PlayerExtraInfo");
+      RealDlsym(clientModule, "_ZN25CCSClientScoreBoardDialog16UpdatePlayerInfoEv");
+  gScoreboardPlayerExtraInfo = RealDlsym(clientModule, "g_PlayerExtraInfo");
 
   if (!gScoreboardAddSection || !gScoreboardConstructor || !gScoreboardUpdateTeamInfo ||
       !gScoreboardUpdateColumnInAllSections || !gScoreboardUpdatePlayerInfo ||
       !gScoreboardPlayerExtraInfo)
     __builtin_trap();
-
-  dlclose(clientHandle);
 }
 
 static void PatchScoreboardSpectatorSection(void) {
@@ -181,7 +154,7 @@ static int IsSpectatorScoreboardPlayer(int playerIndex) {
   if (iTeam == TEAM_SPECTATOR)
     return 1;
 
-  if (playerIndex > MAX_PLAYERS || iTeam != TEAM_UNASSIGNED ||
+  if (iTeam != TEAM_UNASSIGNED ||
       gScoreboardPlayerExtraInfo[playerIndex].teamnumber != TEAM_UNASSIGNED)
     return 0;
 
@@ -192,10 +165,10 @@ static int IsSpectatorScoreboardPlayer(int playerIndex) {
 }
 
 static void UpdateTeamInfo(void* dialog) {
-  short spectatorTeams[MAX_SCOREBOARD_PLAYERS + 1];
-  unsigned char spectatorRows[MAX_SCOREBOARD_PLAYERS + 1];
+  short spectatorTeams[MAX_PLAYERS + 1];
+  unsigned char spectatorRows[MAX_PLAYERS + 1];
 
-  for (int playerIndex = 1; playerIndex <= MAX_SCOREBOARD_PLAYERS; playerIndex++) {
+  for (int playerIndex = 1; playerIndex <= MAX_PLAYERS; playerIndex++) {
     spectatorRows[playerIndex] = IsSpectatorScoreboardPlayer(playerIndex);
     if (!spectatorRows[playerIndex])
       continue;
@@ -206,18 +179,18 @@ static void UpdateTeamInfo(void* dialog) {
 
   gScoreboardUpdateTeamInfoOriginal(dialog);
 
-  for (int playerIndex = 1; playerIndex <= MAX_SCOREBOARD_PLAYERS; playerIndex++) {
+  for (int playerIndex = 1; playerIndex <= MAX_PLAYERS; playerIndex++) {
     if (spectatorRows[playerIndex])
       gScoreboardPlayerExtraInfo[playerIndex].teamnumber = spectatorTeams[playerIndex];
   }
 }
 
 static void UpdatePlayerInfo(void* dialog) {
-  short spectatorTeams[MAX_SCOREBOARD_PLAYERS + 1];
-  unsigned char spectatorDead[MAX_SCOREBOARD_PLAYERS + 1];
-  unsigned char spectatorRows[MAX_SCOREBOARD_PLAYERS + 1];
+  short spectatorTeams[MAX_PLAYERS + 1];
+  unsigned char spectatorDead[MAX_PLAYERS + 1];
+  unsigned char spectatorRows[MAX_PLAYERS + 1];
 
-  for (int playerIndex = 1; playerIndex <= MAX_SCOREBOARD_PLAYERS; playerIndex++) {
+  for (int playerIndex = 1; playerIndex <= MAX_PLAYERS; playerIndex++) {
     spectatorRows[playerIndex] = IsSpectatorScoreboardPlayer(playerIndex);
     if (!spectatorRows[playerIndex])
       continue;
@@ -230,7 +203,7 @@ static void UpdatePlayerInfo(void* dialog) {
 
   gScoreboardUpdatePlayerInfoOriginal(dialog);
 
-  for (int playerIndex = 1; playerIndex <= MAX_SCOREBOARD_PLAYERS; playerIndex++) {
+  for (int playerIndex = 1; playerIndex <= MAX_PLAYERS; playerIndex++) {
     if (spectatorRows[playerIndex]) {
       gScoreboardPlayerExtraInfo[playerIndex].teamnumber = spectatorTeams[playerIndex];
       gScoreboardPlayerExtraInfo[playerIndex].dead = spectatorDead[playerIndex];
@@ -250,8 +223,8 @@ static void HookScoreboardTeamInfo(void) {
     __builtin_trap();
 }
 
-void Scoreboard_Initialize(void) {
-  ResolveScoreboardSymbols();
+void Scoreboard_Initialize(void* clientModule) {
+  ResolveScoreboardSymbols(clientModule);
 
   HookScoreboardTeamInfo();
   HookScoreboardSpectatorInfo();
