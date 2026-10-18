@@ -11,13 +11,14 @@ int Bot_IsPlayer(int entindex, const hud_player_info_t* pinfo) {
 
   const char* pszBot = gEnginefuncs.PlayerInfo_ValueForKey(entindex, "*bot");
 
-  // fake clients may lack the `*bot` marker; zero Steam IDs or anonymous account IDs are indicators
   if (pszBot && strcmp(pszBot, "1") == 0)
     return 1;
 
   if (!pinfo->name)
     return 0;
 
+  // fake clients may lack the `*bot` marker: catch them by a zero steam id or an anonymous game
+  // server account
   return pinfo->m_nSteamID == 0 ||
          ((pinfo->m_nSteamID >> 52U) & 0xfU) == k_EAccountTypeAnonGameServer;
 }

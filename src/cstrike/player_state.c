@@ -4,7 +4,7 @@
 #include "cstrike/player_state.h"
 #include "globals.h"
 
-static short g_PlayerTeam[MAX_SCOREBOARD_PLAYERS + 1];
+static short g_PlayerTeam[MAX_PLAYERS + 1];
 
 int PlayerState_GetTeam(int iPlayer) {
   return g_PlayerTeam[iPlayer];

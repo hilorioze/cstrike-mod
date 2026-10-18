@@ -30,7 +30,7 @@ enum CrosshairCheckState {
 };
 
 enum {
-  // keep the four sniper checks together so mixed patch states are rejected
+  // the four sniper checks are patched as a unit; a mix of patched and original ones is rejected
   kSniperCheckCount = 4,
 };
 
@@ -58,8 +58,9 @@ static uint8_t* FindSniperWeaponChecks(uint8_t* code, size_t codeSize) {
       0x83, 0xf8, 0x18, 0x74, 0x00,        // `cmp eax, WEAPON_G3SG1 (0x18); je rel8`
       0x83, 0xf8, 0x12, 0x74, 0x00,        // `cmp eax, WEAPON_AWP (0x12); je rel8`
       0x83, 0xf8, 0x03, 0x74, 0x00,        // `cmp eax, WEAPON_SCOUT (0x03); je rel8`
-      0x83, 0xf8, 0x0d, 0x66, 0x90, 0x74,
-      0x00,  // `cmp eax, WEAPON_SG550 (0x0d)`; compiler alignment; `je rel8`
+      0x83, 0xf8, 0x0d,                    // `cmp eax, WEAPON_SG550 (0x0d)`
+      0x66, 0x90,                          // compiler alignment
+      0x74, 0x00,                          // `je rel8`
   };
 
   // wildcard the four `je rel8` pairs; their exact state is checked below
@@ -117,7 +118,7 @@ void Crosshair_Initialize(void* clientModule) {
 
   uint8_t* sniperWeaponChecks = FindSniperWeaponChecks((uint8_t*)hudAmmoDraw, drawSymbol->st_size);
 
-  // replace each `je rel8` with two `nop`s so the original instruction length remains unchanged
+  // replace each `je rel8` with two `nop`s to keep the instruction length
   static uint8_t nops[] = {0x90, 0x90};
   enum CrosshairCheckState checkState =
       GetCrosshairCheckState(sniperWeaponChecks + kSniperCheckOffsets[0], kBranchDisplacements[0]);

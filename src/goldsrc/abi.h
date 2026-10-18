@@ -122,7 +122,7 @@ struct mplane_s {
   float dist;
   byte type;
   byte signbits;
-  byte pad[2];  // padding from the original ABI
+  byte pad[2];
 };
 
 struct SCREENINFO_s {
