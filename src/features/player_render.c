@@ -6,6 +6,7 @@
 #include "features/scoreboard.h"
 #include "globals.h"
 #include "goldsrc/abi.h"
+#include "server.h"
 
 static setup_player_model_t g_pfnOriginalSetupPlayerModel;
 static model_t* g_pModelOverride;
@@ -29,6 +30,9 @@ model_t* PlayerRender_SetupPlayerModel(int iPlayer) {
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 int PlayerRender_ShouldRenderModelPair(const entity_state_t* pPlayer, model_t** ppUserModel,
                                        model_t** ppModelIndex) {
+  if (!Server_IsFeatureEnabled(kFeatureModelIndex))
+    return 0;
+
   int iPerspectiveTeam = 0;
   int iPerspectiveIndex = PlayerRender_GetVisualPerspective(&iPerspectiveTeam);
 
@@ -115,6 +119,9 @@ int PlayerRender_GetVisualPerspective(int* pTeam) {
 // NOLINTNEXTLINE(misc-unused-parameters)
 void PlayerRender_ApplyEntity(int type, cl_entity_t* ent, const char* modelname) {
   if (ent->index > 0 && ent->index <= MAX_PLAYERS) {
+    if (!Server_IsFeatureEnabled(kFeaturePlayerTransparency))
+      return;
+
     int iPerspectiveTeam = 0;
     int iPerspectiveIndex = PlayerRender_GetVisualPerspective(&iPerspectiveTeam);
 
@@ -130,6 +137,9 @@ void PlayerRender_ApplyEntity(int type, cl_entity_t* ent, const char* modelname)
       }
     }
   } else if (modelname && strcmp(modelname, "models/pallet_with_bags.mdl") == 0) {
+    if (!Server_IsFeatureEnabled(kFeaturePalletTransparency))
+      return;
+
     ent->curstate.rendermode = kRenderTransAlpha;
     ent->curstate.renderamt = 75;
   }
