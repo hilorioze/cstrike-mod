@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "cstrike/player_state.h"
+#include "features/autoreload.h"
 #include "features/bot.h"
 #include "features/buyammo.h"
 #include "features/crosshair.h"
@@ -210,6 +211,20 @@ int Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion) {
   Scoreboard_Initialize();
 
   return gClientOrigFuncs.Initialize(pEnginefuncs, iVersion);
+}
+
+void CL_CreateMove(float frametime, usercmd_t* cmd, int active) {
+  gClientOrigFuncs.CL_CreateMove(frametime, cmd, active);
+
+  if (active)
+    AutoReload_CreateMove(cmd);
+}
+
+void HUD_PostRunCmd(local_state_t* from, local_state_t* to, usercmd_t* cmd, int runfuncs,
+                    double time, unsigned int random_seed) {
+  gClientOrigFuncs.HUD_PostRunCmd(from, to, cmd, runfuncs, time, random_seed);
+
+  AutoReload_OnPostRunCmd(to);
 }
 
 int HUD_AddEntity(int type, cl_entity_t* ent, const char* modelname) {

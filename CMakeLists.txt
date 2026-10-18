@@ -15,6 +15,7 @@ add_library(cstrike_mod SHARED
   # keep-sorted start
   src/codepatch.c
   src/cstrike/player_state.c
+  src/features/autoreload.c
   src/features/bot.c
   src/features/buyammo.c
   src/features/crosshair.c

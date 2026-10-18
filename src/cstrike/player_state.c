@@ -2,6 +2,7 @@
 
 #include "cstrike/abi.h"
 #include "cstrike/player_state.h"
+#include "globals.h"
 
 static short g_PlayerTeam[MAX_SCOREBOARD_PLAYERS + 1];
 
@@ -25,4 +26,10 @@ void PlayerState_SetTeamFromName(int iPlayer, const char* pszTeamName) {
     PlayerState_SetTeam(iPlayer, TEAM_SPECTATOR);
   else
     PlayerState_SetTeam(iPlayer, TEAM_UNASSIGNED);
+}
+
+bool PlayerState_IsWeaponPredicted(const local_state_t* state) {
+  // the client predicts weapons only for a living, non-spectating local player with `cl_lw` on
+  return state->client.health > 0 && state->client.iuser1 == OBS_NONE &&
+         gEnginefuncs.pfnGetCvarFloat("cl_lw") != 0;
 }
