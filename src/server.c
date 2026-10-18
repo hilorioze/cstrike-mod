@@ -8,7 +8,8 @@
 
 enum {
   // NOLINTNEXTLINE(hicpp-signed-bitwise)
-  kDefaultFeatures = kFeatureModelIndex | kFeaturePlayerTransparency | kFeaturePalletTransparency,
+  kDefaultFeatures = kFeatureModelIndex | kFeaturePlayerTransparency | kFeaturePalletTransparency |
+                     kFeatureAutoReload,
 };
 
 typedef struct {

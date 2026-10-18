@@ -1,0 +1,27 @@
+#include "features/autoreload.h"
+#include "globals.h"
+#include "goldsrc/abi.h"
+#include "server.h"
+
+static bool gEmptyMagazine;
+
+void AutoReload_OnPostRunCmd(const local_state_t* to) {
+  gEmptyMagazine = false;
+
+  if (to->client.health <= 0 || to->client.iuser1 || gEnginefuncs.pfnGetCvarFloat("cl_lw") == 0)
+    return;
+
+  int weaponId = to->client.m_iId;
+
+  // the client weapon simulation updates slots 0 through 31
+  if (weaponId > 0 && weaponId < 32)
+    gEmptyMagazine = to->weapondata[weaponId].m_iClip == 0;
+}
+
+void AutoReload_CreateMove(usercmd_t* cmd) {
+  if (!gEmptyMagazine || !Server_IsFeatureEnabled(kFeatureAutoReload))
+    return;
+
+  // release attack until the magazine is loaded so the weapon can auto-reload
+  cmd->buttons &= ~IN_ATTACK;  // NOLINT(hicpp-signed-bitwise)
+}
