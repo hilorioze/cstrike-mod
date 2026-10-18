@@ -83,6 +83,40 @@ typedef struct {
   unsigned char b;
 } color24;
 
+enum {
+  IN_ATTACK = 1U << 0U,
+  IN_JUMP = 1U << 1U,
+  IN_DUCK = 1U << 2U,
+  IN_FORWARD = 1U << 3U,
+  IN_BACK = 1U << 4U,
+  IN_USE = 1U << 5U,
+  IN_CANCEL = 1U << 6U,
+  IN_LEFT = 1U << 7U,
+  IN_RIGHT = 1U << 8U,
+  IN_MOVELEFT = 1U << 9U,
+  IN_MOVERIGHT = 1U << 10U,
+  IN_ATTACK2 = 1U << 11U,
+  IN_RUN = 1U << 12U,
+  IN_RELOAD = 1U << 13U,
+  IN_ALT1 = 1U << 14U,
+  IN_SCORE = 1U << 15U,
+};
+
+typedef struct usercmd_s {
+  short lerp_msec;
+  byte msec;
+  vec3_t viewangles;
+  float forwardmove;
+  float sidemove;
+  float upmove;
+  byte lightlevel;
+  unsigned short buttons;
+  byte impulse;
+  byte weaponselect;
+  int impact_index;
+  vec3_t impact_position;
+} usercmd_t;
+
 struct mplane_s {
   vec3_t normal;
   float dist;
@@ -329,6 +363,80 @@ typedef struct entity_state_s {
   float vuser3[3];
   float vuser4[3];
 } entity_state_t;
+
+typedef struct weapon_data_s {
+  int m_iId;
+  int m_iClip;
+  float m_flNextPrimaryAttack;
+  float m_flNextSecondaryAttack;
+  float m_flTimeWeaponIdle;
+  int m_fInReload;
+  int m_fInSpecialReload;
+  float m_flNextReload;
+  float m_flPumpTime;
+  float m_fReloadTime;
+  float m_fAimedDamage;
+  float m_fNextAimBonus;
+  int m_fInZoom;
+  int m_iWeaponState;
+  int iuser1;
+  int iuser2;
+  int iuser3;
+  int iuser4;
+  float fuser1;
+  float fuser2;
+  float fuser3;
+  float fuser4;
+} weapon_data_t;
+
+typedef struct clientdata_s {
+  vec3_t origin;
+  vec3_t velocity;
+  int viewmodel;
+  vec3_t punchangle;
+  int flags;
+  int waterlevel;
+  int watertype;
+  vec3_t view_ofs;
+  float health;
+  int bInDuck;
+  int weapons;
+  int flTimeStepSound;
+  int flDuckTime;
+  int flSwimTime;
+  int waterjumptime;
+  float maxspeed;
+  float fov;
+  int weaponanim;
+  int m_iId;
+  int ammo_shells;
+  int ammo_nails;
+  int ammo_cells;
+  int ammo_rockets;
+  float m_flNextAttack;
+  int tfstate;
+  int pushmsec;
+  int deadflag;
+  char physinfo[256];
+  int iuser1;
+  int iuser2;
+  int iuser3;
+  int iuser4;
+  float fuser1;
+  float fuser2;
+  float fuser3;
+  float fuser4;
+  vec3_t vuser1;
+  vec3_t vuser2;
+  vec3_t vuser3;
+  vec3_t vuser4;
+} clientdata_t;
+
+typedef struct local_state_s {
+  entity_state_t playerstate;
+  clientdata_t client;
+  weapon_data_t weapondata[64];
+} local_state_t;
 
 typedef struct resource_s {
   char szFileName[64];

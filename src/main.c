@@ -27,6 +27,9 @@ static struct {
 } dlsym_hooks[] = {
     {"dlsym", NULL, NULL, dlsym},
     {"Initialize", "cstrike/cl_dlls/client.so", &gClientOrigFuncs.Initialize, Initialize},
+    {"CL_CreateMove", "cstrike/cl_dlls/client.so", &gClientOrigFuncs.CL_CreateMove, CL_CreateMove},
+    {"HUD_PostRunCmd", "cstrike/cl_dlls/client.so", &gClientOrigFuncs.HUD_PostRunCmd,
+     HUD_PostRunCmd},
     {"HUD_AddEntity", "cstrike/cl_dlls/client.so", &gClientOrigFuncs.HUD_AddEntity, HUD_AddEntity},
     {"HUD_Key_Event", "cstrike/cl_dlls/client.so", &gClientOrigFuncs.HUD_Key_Event, HUD_Key_Event},
     {"HUD_Redraw", "cstrike/cl_dlls/client.so", &gClientOrigFuncs.HUD_Redraw, HUD_Redraw},

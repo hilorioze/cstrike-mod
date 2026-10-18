@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "cstrike/player_state.h"
+#include "features/autoreload.h"
 #include "features/bot.h"
 #include "features/buyammo.h"
 #include "features/crosshair.h"
@@ -18,6 +19,7 @@
 #include "loader.h"
 
 typedef struct {
+  int (*MsgFunc_CurWeapon)(const char* pszName, int iSize, void* pbuf);
   int (*MsgFunc_ItemStatus)(const char* pszName, int iSize, void* pbuf);
   int (*MsgFunc_Money)(const char* pszName, int iSize, void* pbuf);
   int (*MsgFunc_NVGToggle)(const char* pszName, int iSize, void* pbuf);
@@ -29,6 +31,7 @@ static usermsg_orig_funcs_t gUsermsgOrigFuncs;
 static struct {
   void (*BEGIN_READ)(void* buf, int size);
   int (*READ_BYTE)(void);
+  int (*READ_CHAR)(void);
   int (*READ_LONG)(void);
   const char* (*READ_STRING)(void);
 } parsemsg;
@@ -38,6 +41,18 @@ static void pfnFillRGBA(int x, int y, int w, int h, int r, int g, int b, int a) 
     return;
 
   gEnginefuncs.pfnFillRGBA(x, y, w, h, r, g, b, a);
+}
+
+static int MsgFunc_CurWeapon(const char* pszName, int iSize, void* pbuf) {
+  parsemsg.BEGIN_READ(pbuf, iSize);
+
+  int iState = parsemsg.READ_BYTE();
+  int iId = parsemsg.READ_CHAR();
+  int iClip = parsemsg.READ_CHAR();
+
+  AutoReload_OnCurWeapon(iState, iId, iClip);
+
+  return gUsermsgOrigFuncs.MsgFunc_CurWeapon(pszName, iSize, pbuf);
 }
 
 static int MsgFunc_ItemStatus(const char* pszName, int iSize, void* pbuf) {
@@ -93,6 +108,12 @@ static int pfnHookUserMsg(char* szMsgName, int (*pfn)(const char*, int, void*)) 
   if (strcmp(szMsgName, "ClCorpse") == 0)
     return gEnginefuncs.pfnHookUserMsg(szMsgName, MsgFunc_ClCorpse);
 
+  if (strcmp(szMsgName, "CurWeapon") == 0) {
+    gUsermsgOrigFuncs.MsgFunc_CurWeapon = pfn;
+
+    return gEnginefuncs.pfnHookUserMsg(szMsgName, MsgFunc_CurWeapon);
+  }
+
   if (strcmp(szMsgName, "ItemStatus") == 0) {
     gUsermsgOrigFuncs.MsgFunc_ItemStatus = pfn;
 
@@ -135,12 +156,14 @@ static const char* PlayerInfo_ValueForKey(int playerNum, const char* key) {
 static int ResolveParsemsgFromModule(void* module) {
   void (*pfnBeginRead)(void* buf, int size) = RealDlsym(module, "_Z10BEGIN_READPvi");
   int (*pfnReadByte)(void) = RealDlsym(module, "_Z9READ_BYTEv");
+  int (*pfnReadChar)(void) = RealDlsym(module, "_Z9READ_CHARv");
   int (*pfnReadLong)(void) = RealDlsym(module, "_Z9READ_LONGv");
   const char* (*pfnReadString)(void) = RealDlsym(module, "_Z11READ_STRINGv");
 
-  if (pfnBeginRead && pfnReadByte && pfnReadLong && pfnReadString) {
+  if (pfnBeginRead && pfnReadByte && pfnReadChar && pfnReadLong && pfnReadString) {
     parsemsg.BEGIN_READ = pfnBeginRead;
     parsemsg.READ_BYTE = pfnReadByte;
+    parsemsg.READ_CHAR = pfnReadChar;
     parsemsg.READ_LONG = pfnReadLong;
     parsemsg.READ_STRING = pfnReadString;
 
@@ -210,6 +233,20 @@ int Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion) {
   Scoreboard_Initialize();
 
   return gClientOrigFuncs.Initialize(pEnginefuncs, iVersion);
+}
+
+void CL_CreateMove(float frametime, usercmd_t* cmd, int active) {
+  gClientOrigFuncs.CL_CreateMove(frametime, cmd, active);
+
+  if (active)
+    AutoReload_CreateMove(cmd);
+}
+
+void HUD_PostRunCmd(local_state_t* from, local_state_t* to, usercmd_t* cmd, int runfuncs,
+                    double time, unsigned int random_seed) {
+  gClientOrigFuncs.HUD_PostRunCmd(from, to, cmd, runfuncs, time, random_seed);
+
+  AutoReload_OnPostRunCmd(to);
 }
 
 int HUD_AddEntity(int type, cl_entity_t* ent, const char* modelname) {
