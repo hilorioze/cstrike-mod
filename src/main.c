@@ -12,11 +12,16 @@
 static void* (*real_dlsym)(void*, const char*);
 
 void* RealDlsym(void* handle, const char* symbol) {
+  // take the next preloaded `dlsym`, not libc's: the steam overlay's `close` doesn't close anything
+  // until the overlay's own `dlsym` has run
   if (!real_dlsym) {
-    real_dlsym = dlvsym(RTLD_NEXT, "dlsym", "GLIBC_2.0");
+    void* (*libcDlsym)(void*, const char*) = dlvsym(RTLD_NEXT, "dlsym", "GLIBC_2.0");
+    real_dlsym = libcDlsym(RTLD_NEXT, "dlsym");
   }
 
-  return real_dlsym(handle, symbol);
+  // glibc looks up `RTLD_NEXT` after the library `dlsym` returns to: jump instead of calling so it
+  // returns straight to our caller
+  __attribute__((musttail)) return real_dlsym(handle, symbol);
 }
 
 static struct {
@@ -38,6 +43,11 @@ static struct {
     {NULL}};
 
 __attribute__((visibility("default"))) void* dlsym(void* handle, const char* symbol) {
+  // `RTLD_NEXT` lookups have to reach glibc through jumps only, see `RealDlsym`
+  if (handle == RTLD_NEXT) {
+    __attribute__((musttail)) return RealDlsym(handle, symbol);
+  }
+
   void* ptr = RealDlsym(handle, symbol);
   Dl_info info;
 
