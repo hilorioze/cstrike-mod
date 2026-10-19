@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "cstrike/player_state.h"
+#include "features/auth.h"
 #include "features/autopistol.h"
 #include "features/autoreload.h"
 #include "features/bot.h"
@@ -184,6 +185,7 @@ int Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion) {
   ResolveParsemsg(clientModule);
 
   gEnginefuncs = *pEnginefuncs;
+  Auth_Initialize();
   Nvg_Initialize(clientModule, SendNvgToggle);
   Crosshair_Initialize(clientModule);
 

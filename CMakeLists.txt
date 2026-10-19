@@ -13,8 +13,11 @@ add_link_options(-m32)
 
 add_library(cstrike_mod SHARED
   # keep-sorted start
+  src/auth/crypto.c
+  src/auth/ticket.c
   src/codepatch.c
   src/cstrike/player_state.c
+  src/features/auth.c
   src/features/autopistol.c
   src/features/autoreload.c
   src/features/bot.c

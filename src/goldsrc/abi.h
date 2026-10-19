@@ -208,6 +208,10 @@ struct beam_s {
 typedef void (*net_api_response_func_t)(struct net_response_s*);
 typedef int (*pfnUserMsgHook)(const char*, int, void*);
 
+enum {
+  FCVAR_ARCHIVE = 1U << 0U,
+};
+
 typedef struct cvar_s {
   char* name;
   char* string;
