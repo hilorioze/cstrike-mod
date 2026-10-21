@@ -3,6 +3,7 @@
 #include <dlfcn.h>
 #include <dobby.h>
 #include <link.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "codepatch.h"
@@ -12,8 +13,10 @@
 #include "globals.h"
 #include "goldsrc/abi.h"
 #include "loader.h"
+#include "steam/abi.h"
 
 typedef void (*scoreboard_update_player_info_t)(void* dialog);
+typedef void (*scoreboard_update_player_avatar_t)(void* dialog, int playerIndex, void* keyValues);
 
 static uint8_t* gScoreboardAddSection;
 static uint8_t* gScoreboardConstructor;
@@ -22,7 +25,11 @@ static uint8_t* gScoreboardUpdateColumnInAllSections;
 static scoreboard_update_player_info_t gScoreboardUpdateTeamInfoOriginal;
 static scoreboard_update_player_info_t gScoreboardUpdatePlayerInfo;
 static scoreboard_update_player_info_t gScoreboardUpdatePlayerInfoOriginal;
+static scoreboard_update_player_avatar_t gScoreboardUpdatePlayerAvatar;
+static scoreboard_update_player_avatar_t gScoreboardUpdatePlayerAvatarOriginal;
 static extra_player_info_t* gScoreboardPlayerExtraInfo;
+static ISteamFriends* (*gSteamFriends)(void);
+static uint64_t gScoreboardRequestedSteamIds[MAX_PLAYERS + 1];
 
 int Scoreboard_GetPlayerTeam(int index) {
   return gScoreboardPlayerExtraInfo[index].teamnumber;
@@ -42,11 +49,14 @@ static void ResolveScoreboardSymbols(void* clientModule) {
       RealDlsym(clientModule, "_ZN25CCSClientScoreBoardDialog25UpdateColumnInAllSectionsEPKcPKwib");
   gScoreboardUpdatePlayerInfo =
       RealDlsym(clientModule, "_ZN25CCSClientScoreBoardDialog16UpdatePlayerInfoEv");
+  gScoreboardUpdatePlayerAvatar =
+      RealDlsym(clientModule, "_ZN25CCSClientScoreBoardDialog18UpdatePlayerAvatarEiP9KeyValues");
   gScoreboardPlayerExtraInfo = RealDlsym(clientModule, "g_PlayerExtraInfo");
+  gSteamFriends = RealDlsym(clientModule, "SteamFriends");
 
   if (!gScoreboardAddSection || !gScoreboardConstructor || !gScoreboardUpdateTeamInfo ||
       !gScoreboardUpdateColumnInAllSections || !gScoreboardUpdatePlayerInfo ||
-      !gScoreboardPlayerExtraInfo)
+      !gScoreboardUpdatePlayerAvatar || !gScoreboardPlayerExtraInfo || !gSteamFriends)
     __builtin_trap();
 }
 
@@ -213,6 +223,25 @@ static void UpdatePlayerInfo(void* dialog) {
   }
 }
 
+static void UpdatePlayerAvatar(void* dialog, int playerIndex, void* keyValues) {
+  hud_player_info_t info = {0};
+  gEnginefuncs.pfnGetPlayerInfo(playerIndex, &info);
+
+  // the scoreboard only shows avatars steam already has, and steam loads them for players outside
+  // the friends list only while it knows the game server, which emulator `cl_auth` modes and
+  // `kFeatureHideServer` don't report: request the persona with the avatar once per player, the
+  // scoreboard picks it up on a later update
+  if (info.m_nSteamID && info.m_nSteamID != gScoreboardRequestedSteamIds[playerIndex]) {
+    ISteamFriends* friends = gSteamFriends();
+    CSteamID steamId = {.m_steamid.m_unAll64Bits = info.m_nSteamID};
+    friends->vtable->RequestUserInformation(friends, steamId, false);
+
+    gScoreboardRequestedSteamIds[playerIndex] = info.m_nSteamID;
+  }
+
+  gScoreboardUpdatePlayerAvatarOriginal(dialog, playerIndex, keyValues);
+}
+
 static void HookScoreboardSpectatorInfo(void) {
   if (DobbyHook(gScoreboardUpdatePlayerInfo, UpdatePlayerInfo,
                 (void**)&gScoreboardUpdatePlayerInfoOriginal) != 0)
@@ -225,11 +254,18 @@ static void HookScoreboardTeamInfo(void) {
     __builtin_trap();
 }
 
+static void HookScoreboardPlayerAvatar(void) {
+  if (DobbyHook(gScoreboardUpdatePlayerAvatar, UpdatePlayerAvatar,
+                (void**)&gScoreboardUpdatePlayerAvatarOriginal) != 0)
+    __builtin_trap();
+}
+
 void Scoreboard_Initialize(void* clientModule) {
   ResolveScoreboardSymbols(clientModule);
 
   HookScoreboardTeamInfo();
   HookScoreboardSpectatorInfo();
+  HookScoreboardPlayerAvatar();
 
   PatchScoreboardSpectatorSection();
 }
