@@ -15,6 +15,7 @@
 #include "globals.h"
 #include "goldsrc/abi.h"
 #include "loader.h"
+#include "server.h"
 
 static cvar_t* gAuth;
 static cvar_t* gAuthKey;
@@ -22,6 +23,8 @@ static cvar_t* gAuthVolumeId;
 static cvar_t* gAuthAccountId;
 static auth_ticket_config_t gTicketConfig;
 static bool gNativeConnection;
+static uint32_t gNativeIp;
+static uint16_t gNativePort;
 static void (*gSendConnectPacketOriginal)(void);
 static void (*gDisconnect)(void);
 static void (*gWriteConfiguration)(void);
@@ -143,7 +146,20 @@ static void CL_SendConnectPacket(void) {
 static int Steam_GSInitiateGameConnection(void* ticket, int capacity, uint64_t serverId,
                                           uint32_t ip, uint16_t port, int secure) {
   if (gTicketConfig.kind == kAuthSteam) {
+    // steam reports the server it is given to friends; it only warns about a zero address and the
+    // ticket doesn't carry it, so a zero one still connects and shows just the game. the engine
+    // passes the address in `netadr_t` byte order
+    netadr_t address = {.type = NA_IP, .port = port};
+    memcpy(address.ip, &ip, sizeof(address.ip));
+    if (Server_IsFeatureEnabledAt(kFeatureHideServer, &address)) {
+      serverId = 0;
+      ip = 0;
+      port = 0;
+    }
+
     gNativeConnection = true;
+    gNativeIp = ip;
+    gNativePort = port;
 
     return gInitiateGameConnectionOriginal(ticket, capacity, serverId, ip, port, secure);
   }
@@ -156,9 +172,10 @@ static int Steam_GSInitiateGameConnection(void* ticket, int capacity, uint64_t s
   return (int)size;
 }
 
+// steam finds the server to drop by the address it was initiated with
 static void Steam_GSTerminateGameConnection(uint32_t ip, uint16_t port) {
   if (gNativeConnection)
-    gTerminateGameConnectionOriginal(ip, port);
+    gTerminateGameConnectionOriginal(gNativeIp, gNativePort);
 
   gNativeConnection = false;
 }

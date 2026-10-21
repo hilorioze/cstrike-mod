@@ -9,7 +9,7 @@
 enum {
   // NOLINTNEXTLINE(hicpp-signed-bitwise)
   kDefaultFeatures = kFeatureModelIndex | kFeaturePlayerTransparency | kFeaturePalletTransparency |
-                     kFeatureAutoReload | kFeatureAutoPistol,
+                     kFeatureAutoReload | kFeatureAutoPistol | kFeatureHideServer,
 };
 
 typedef struct {
@@ -64,11 +64,8 @@ static const server_profile_t* FindProfile(const netadr_t* remoteAddress) {
   return NULL;
 }
 
-static unsigned int ResolveFeatures(const net_status_t* status) {
-  if (!status->connected || status->remote_address.type != NA_IP)
-    return kDefaultFeatures;
-
-  const server_profile_t* profile = FindProfile(&status->remote_address);
+static unsigned int ResolveFeatures(const netadr_t* address) {
+  const server_profile_t* profile = FindProfile(address);
   if (!profile)
     return kDefaultFeatures;
 
@@ -79,6 +76,12 @@ static unsigned int ResolveFeatures(const net_status_t* status) {
 int Server_IsFeatureEnabled(server_feature_t feature) {
   net_status_t status;
   gEnginefuncs.pNetAPI->Status(&status);
+  if (!status.connected || status.remote_address.type != NA_IP)
+    return (kDefaultFeatures & feature) != 0;
 
-  return (ResolveFeatures(&status) & feature) != 0;
+  return Server_IsFeatureEnabledAt(feature, &status.remote_address);
+}
+
+int Server_IsFeatureEnabledAt(server_feature_t feature, const netadr_t* address) {
+  return (ResolveFeatures(address) & feature) != 0;
 }
