@@ -502,7 +502,13 @@ typedef struct net_api_s {
 
 typedef struct model_s {
   char name[64];
-  qboolean needload;
+
+  enum {
+    NL_PRESENT = 0,
+    NL_NEEDS_LOADED = 1,
+    NL_UNREFERENCED = 2,
+    NL_CLIENT = 3,
+  } needload;
 
   enum {
     mod_brush = 0,
@@ -566,6 +572,16 @@ typedef struct model_s {
     void* data;
   } cache;
 } model_t;
+
+typedef struct gltexture_s {
+  unsigned int texnum;
+  short servercount;
+  short paletteIndex;
+  int width;
+  int height;
+  qboolean mipmap;
+  char identifier[64];
+} gltexture_t;
 
 typedef struct player_info_s {
   int userid;
