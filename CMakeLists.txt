@@ -29,6 +29,7 @@ add_library(cstrike_mod SHARED
   src/features/scoreboard.c
   src/globals.c
   src/hooks/client.c
+  src/hooks/filesystem.c
   src/hooks/studio.c
   src/main.c
   src/server.c
