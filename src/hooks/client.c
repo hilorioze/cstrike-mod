@@ -206,9 +206,11 @@ int Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion) {
 void CL_CreateMove(float frametime, usercmd_t* cmd, int active) {
   gClientOrigFuncs.CL_CreateMove(frametime, cmd, active);
 
+  // auto-reload tells the player's own attack presses apart, so it sees the command before the
+  // features releasing attack
   if (active) {
-    AutoPistol_CreateMove(cmd);
     AutoReload_CreateMove(cmd);
+    AutoPistol_CreateMove(cmd);
   }
 }
 
