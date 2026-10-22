@@ -20,10 +20,24 @@ void AutoReload_OnPostRunCmd(const local_state_t* to) {
 
   int weaponId = to->client.m_iId;
 
-  if (weaponId != WEAPON_NONE) {
-    gEmptyMagazine = to->weapondata[weaponId].m_iClip == 0;
-    gLoadingShells = to->weapondata[weaponId].m_fInSpecialReload != 0;
+  switch (weaponId) {
+    // these have no magazine, but custom server weapons based on them may report a clip of 0
+    case WEAPON_NONE:
+    case WEAPON_KNIFE:
+    case WEAPON_HEGRENADE:
+    case WEAPON_FLASHBANG:
+    case WEAPON_SMOKEGRENADE:
+    case WEAPON_C4:
+      return;
+    case WEAPON_M3:
+    case WEAPON_XM1014:
+      gLoadingShells = to->weapondata[weaponId].m_fInSpecialReload != 0;
+      break;
+    default:
+      break;
   }
+
+  gEmptyMagazine = to->weapondata[weaponId].m_iClip == 0;
 }
 
 void AutoReload_CreateMove(usercmd_t* cmd) {
