@@ -20,6 +20,7 @@ add_library(cstrike_mod SHARED
   src/features/auth.c
   src/features/autopistol.c
   src/features/autoreload.c
+  src/features/autoshotgun.c
   src/features/bot.c
   src/features/buyammo.c
   src/features/crosshair.c

@@ -8,6 +8,7 @@
 #include "features/auth.h"
 #include "features/autopistol.h"
 #include "features/autoreload.h"
+#include "features/autoshotgun.h"
 #include "features/bot.h"
 #include "features/buyammo.h"
 #include "features/crosshair.h"
@@ -211,6 +212,7 @@ void CL_CreateMove(float frametime, usercmd_t* cmd, int active) {
   if (active) {
     AutoReload_CreateMove(cmd);
     AutoPistol_CreateMove(cmd);
+    AutoShotgun_CreateMove(cmd);
   }
 }
 
@@ -220,6 +222,7 @@ void HUD_PostRunCmd(local_state_t* from, local_state_t* to, usercmd_t* cmd, int 
 
   AutoPistol_OnPostRunCmd(to);
   AutoReload_OnPostRunCmd(to);
+  AutoShotgun_OnPostRunCmd(to);
 }
 
 int HUD_AddEntity(int type, cl_entity_t* ent, const char* modelname) {
