@@ -30,6 +30,7 @@ add_library(cstrike_mod SHARED
   src/globals.c
   src/hooks/client.c
   src/hooks/filesystem.c
+  src/hooks/serverbrowser.c
   src/hooks/studio.c
   src/hooks/texture.c
   src/main.c

@@ -5,9 +5,16 @@
 
 typedef struct FriendGameInfo_t FriendGameInfo_t;
 typedef struct ISteamFriends ISteamFriends;
+typedef struct ISteamMatchmaking ISteamMatchmaking;
 
 typedef uint32_t AppId_t;
 typedef uint64_t SteamAPICall_t;
+
+enum {
+  k_unFavoriteFlagNone = 0,
+  k_unFavoriteFlagFavorite = 1,
+  k_unFavoriteFlagHistory = 2,
+};
 
 typedef enum {
   k_EFriendRelationshipNone = 0,
@@ -142,4 +149,21 @@ typedef struct {
 
 struct ISteamFriends {
   const ISteamFriendsVtbl* vtable;
+};
+
+// `SteamMatchMaking009`, the version `libsteam_api.so` of build 8684 hands out, up to the favorites
+// methods
+typedef struct {
+  int (*GetFavoriteGameCount)(ISteamMatchmaking* self);
+  bool (*GetFavoriteGame)(ISteamMatchmaking* self, int iGame, AppId_t* pnAppID, uint32_t* pnIP,
+                          uint16_t* pnConnPort, uint16_t* pnQueryPort, uint32_t* punFlags,
+                          uint32_t* pRTime32LastPlayedOnServer);
+  int (*AddFavoriteGame)(ISteamMatchmaking* self, AppId_t nAppID, uint32_t nIP, uint16_t nConnPort,
+                         uint16_t nQueryPort, uint32_t unFlags, uint32_t rTime32LastPlayedOnServer);
+  bool (*RemoveFavoriteGame)(ISteamMatchmaking* self, AppId_t nAppID, uint32_t nIP,
+                             uint16_t nConnPort, uint16_t nQueryPort, uint32_t unFlags);
+} ISteamMatchmakingVtbl;
+
+struct ISteamMatchmaking {
+  const ISteamMatchmakingVtbl* vtable;
 };
