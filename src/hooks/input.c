@@ -4,6 +4,7 @@
 
 #include "goldsrc/abi.h"
 #include "loader.h"
+#include "vgui2/abi.h"
 
 enum {
   kKeyCount = 256,
@@ -15,6 +16,7 @@ static void (*real_ClientDLL_ClearStates)(void);
 
 static void* gVGuiPaint;
 static qboolean* gKeyDown;
+static IInputInternal** gInputInternal;
 
 static void ResolveEngine(void* caller) {
   Dl_info info;
@@ -26,6 +28,7 @@ static void ResolveEngine(void* caller) {
   real_ClientDLL_ClearStates = RealDlsym(engine, "ClientDLL_ClearStates");
   gVGuiPaint = RealDlsym(engine, "VGuiWrap2_Paint");
   gKeyDown = RealDlsym(engine, "keydown");
+  gInputInternal = RealDlsym(engine, "g_InputInternal");
 }
 
 // the original releases all 256 keys, and a release runs the `-` command of a `+` bind even for a
@@ -38,6 +41,17 @@ static void ReleaseEngineKeys(void) {
 
   real_Key_ClearStates();
   real_ClientDLL_ClearStates();
+}
+
+// vgui misses the releases sent while the window is out of focus, and a shift or ctrl it still
+// holds turns a click in the server browser into a range or toggle selection
+static void ReleaseVguiKeys(void) {
+  IInputInternal* input = *gInputInternal;
+
+  for (KeyCode code = 0; code < KEY_LAST; code++) {
+    if (input->vtable->IsKeyDown(input, code))
+      input->vtable->InternalKeyCodeReleased(input, code);
+  }
 }
 
 // the engine clears the keys when the game ui closes and when the window gets focus back: keep the
@@ -55,4 +69,6 @@ void ClearIOStates(void) {
   // name, so tell them apart from `VGuiWrap2_Paint` instead
   if (info.dli_saddr == gVGuiPaint)
     ReleaseEngineKeys();
+  else
+    ReleaseVguiKeys();
 }
