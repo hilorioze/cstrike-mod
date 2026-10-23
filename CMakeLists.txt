@@ -23,6 +23,7 @@ add_library(cstrike_mod SHARED
   src/features/autoshotgun.c
   src/features/bot.c
   src/features/buyammo.c
+  src/features/chat.c
   src/features/crosshair.c
   src/features/cstatus.c
   src/features/nvg.c

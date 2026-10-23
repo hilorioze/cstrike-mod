@@ -11,6 +11,7 @@
 #include "features/autoshotgun.h"
 #include "features/bot.h"
 #include "features/buyammo.h"
+#include "features/chat.h"
 #include "features/crosshair.h"
 #include "features/cstatus.h"
 #include "features/nvg.h"
@@ -189,6 +190,7 @@ int Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion) {
   Auth_Initialize();
   Nvg_Initialize(clientModule, SendNvgToggle);
   Crosshair_Initialize(clientModule);
+  Chat_Initialize(clientModule);
 
   pEnginefuncs->pfnHookUserMsg = pfnHookUserMsg;
   pEnginefuncs->pfnFillRGBA = pfnFillRGBA;
