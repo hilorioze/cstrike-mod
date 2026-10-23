@@ -243,11 +243,3 @@ int HUD_Key_Event(int down, int keynum, const char* pszCurrentBinding) {
 
   return gClientOrigFuncs.HUD_Key_Event(down, keynum, pszCurrentBinding);
 }
-
-int HUD_Redraw(float flTime, int intermission) {
-  int iResult = gClientOrigFuncs.HUD_Redraw(flTime, intermission);
-
-  Nvg_OnRedraw();
-
-  return iResult;
-}

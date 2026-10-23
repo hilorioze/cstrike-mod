@@ -41,7 +41,6 @@ static struct {
      HUD_PostRunCmd},
     {"HUD_AddEntity", "cstrike/cl_dlls/client.so", &gClientOrigFuncs.HUD_AddEntity, HUD_AddEntity},
     {"HUD_Key_Event", "cstrike/cl_dlls/client.so", &gClientOrigFuncs.HUD_Key_Event, HUD_Key_Event},
-    {"HUD_Redraw", "cstrike/cl_dlls/client.so", &gClientOrigFuncs.HUD_Redraw, HUD_Redraw},
     {"HUD_GetStudioModelInterface", "cstrike/cl_dlls/client.so",
      &gClientOrigFuncs.HUD_GetStudioModelInterface, HUD_GetStudioModelInterface},
     {NULL}};

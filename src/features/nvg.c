@@ -1,3 +1,4 @@
+#include <dobby.h>
 #include <string.h>
 
 #include "cstrike/abi.h"
@@ -8,23 +9,28 @@
 
 static bool g_bServerHasNightVision;
 static bool g_bNightVisionOn;
-static dlight_t* g_pNvgDlight;
-static dlight_t* (*g_pfnOriginalCLAllocDlight)(int key);
 static void (*g_pfnSendToggle)(int iEnabled);
 static int* g_pNvgAlpha;
 
 enum {
   // bumped from the default `Com_RandomLong(750, 800)`
   kNvgRadius = 1600,
+  // `NVG` in ascii
+  kNvgLightKey = 0x4e5647,
 };
 
-static dlight_t* pfnCLAllocDlight(int key) {
-  dlight_t* pDlight = g_pfnOriginalCLAllocDlight(key);
-
-  if (key == 0)
-    g_pNvgDlight = pDlight;
-
-  return pDlight;
+// only night vision calls `EV_HLDM_CreateLight`, once per frame; each call adds an anonymous light
+// that lives 0.1s, so a varying number of them overlap and flicker: reuse one keyed light instead
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters,misc-unused-parameters)
+static void CreateLight(float* origin, float radius, int r, int g, int b, float time) {
+  dlight_t* light = gEnginefuncs.pEfxAPI->CL_AllocDlight(kNvgLightKey);
+  // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling)
+  memcpy(light->origin, origin, sizeof(light->origin));
+  light->radius = kNvgRadius;
+  light->color.r = 255;
+  light->color.g = 255;
+  light->color.b = 255;
+  light->die = gEnginefuncs.GetClientTime() + time;
 }
 
 void Nvg_Initialize(void* clientModule, void (*pfnSendToggle)(int iEnabled)) {
@@ -32,14 +38,12 @@ void Nvg_Initialize(void* clientModule, void (*pfnSendToggle)(int iEnabled)) {
 
   g_bServerHasNightVision = false;
   g_bNightVisionOn = false;
-  g_pNvgDlight = NULL;
   g_pfnSendToggle = pfnSendToggle;
   g_pNvgAlpha = &pHUD->m_NightVision.m_iAlpha;
 
-  if (gEnginefuncs.pEfxAPI->CL_AllocDlight != pfnCLAllocDlight)
-    g_pfnOriginalCLAllocDlight = gEnginefuncs.pEfxAPI->CL_AllocDlight;
-
-  gEnginefuncs.pEfxAPI->CL_AllocDlight = pfnCLAllocDlight;
+  void* createLight = RealDlsym(clientModule, "_Z19EV_HLDM_CreateLightPffiiif");
+  if (DobbyHook(createLight, CreateLight, NULL) != 0)
+    __builtin_trap();
 }
 
 void Nvg_OnItemStatus(int iItemStatus) {
@@ -75,14 +79,4 @@ int Nvg_ShouldSuppressOverlay(int x, int y, int w, int h, int r, int g, int b, i
 
   return g_bNightVisionOn && x == 0 && y == 0 && w == screenInfo.iWidth &&
          h == screenInfo.iHeight && r == 50 && g == 225 && b == 50 && a == *g_pNvgAlpha;
-}
-
-void Nvg_OnRedraw(void) {
-  if (!g_bNightVisionOn || !g_pNvgDlight)
-    return;
-
-  g_pNvgDlight->color.r = 255;
-  g_pNvgDlight->color.g = 255;
-  g_pNvgDlight->color.b = 255;
-  g_pNvgDlight->radius = kNvgRadius;
 }
