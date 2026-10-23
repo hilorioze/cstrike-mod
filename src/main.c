@@ -6,6 +6,7 @@
 
 #include "globals.h"
 #include "hooks/client.h"
+#include "hooks/clipboard.h"
 #include "hooks/studio.h"
 #include "loader.h"
 
@@ -31,6 +32,9 @@ static struct {
   void* hook;
 } dlsym_hooks[] = {
     {"dlsym", NULL, NULL, dlsym},
+    // no library filter: sdl gets the steam overlay's `XNextEvent`, which has to stay in the chain
+    {"XNextEvent", NULL, &gClipboardOrigFuncs.XNextEvent, Clipboard_NextEvent},
+    {"XSendEvent", NULL, &gClipboardOrigFuncs.XSendEvent, Clipboard_SendEvent},
     {"Initialize", "cstrike/cl_dlls/client.so", &gClientOrigFuncs.Initialize, Initialize},
     {"CL_CreateMove", "cstrike/cl_dlls/client.so", &gClientOrigFuncs.CL_CreateMove, CL_CreateMove},
     {"HUD_PostRunCmd", "cstrike/cl_dlls/client.so", &gClientOrigFuncs.HUD_PostRunCmd,

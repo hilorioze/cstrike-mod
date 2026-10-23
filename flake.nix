@@ -40,6 +40,7 @@
       dobby,
       lib,
       libGL,
+      libx11,
       stdenv,
       # keep-sorted end
       ...
@@ -65,6 +66,7 @@
           # keep-sorted start
           dobby
           libGL
+          libx11
           # keep-sorted end
         ];
 

@@ -1,6 +1,7 @@
 {
   # keep-sorted start
   inputs,
+  lib,
   pkgs,
   # keep-sorted end
   ...
@@ -9,18 +10,31 @@
 in {
   env = {
     CMAKE_PREFIX_PATH = dobby;
-    CPATH = "${dobby}/include:${pkgs.pkgsi686Linux.libGL.dev}/include";
+    CPATH = lib.makeIncludePath (with pkgs.pkgsi686Linux; [
+      # keep-sorted start
+      dobby
+      libGL
+      libx11
+      xorgproto
+      # keep-sorted end
+    ]);
   };
 
-  packages = [
-    # keep-sorted start
-    dobby
-    pkgs.clang-tools
-    pkgs.cmake
-    pkgs.pkgsi686Linux.glibc.dev
-    pkgs.pkgsi686Linux.libGL.dev
-    # keep-sorted end
-  ];
+  packages =
+    (with pkgs; [
+      # keep-sorted start
+      clang-tools
+      cmake
+      # keep-sorted end
+    ])
+    ++ (with pkgs.pkgsi686Linux; [
+      # keep-sorted start
+      dobby
+      glibc.dev
+      libGL.dev
+      libx11.dev
+      # keep-sorted end
+    ]);
 
   scripts.clangd-i686-gcc.exec = ''exec nix develop path:$DEVENV_ROOT#packages.i686-linux.default -c gcc "$@"'';
 
