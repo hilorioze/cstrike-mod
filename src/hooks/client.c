@@ -14,6 +14,7 @@
 #include "features/chat.h"
 #include "features/crosshair.h"
 #include "features/cstatus.h"
+#include "features/intermission.h"
 #include "features/nvg.h"
 #include "features/player_render.h"
 #include "features/scoreboard.h"
@@ -191,6 +192,7 @@ int Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion) {
   Nvg_Initialize(clientModule, SendNvgToggle);
   Crosshair_Initialize(clientModule);
   Chat_Initialize(clientModule);
+  Intermission_Initialize();
 
   pEnginefuncs->pfnHookUserMsg = pfnHookUserMsg;
   pEnginefuncs->pfnFillRGBA = pfnFillRGBA;
