@@ -27,7 +27,6 @@
 typedef struct {
   int (*MsgFunc_ItemStatus)(const char* pszName, int iSize, void* pbuf);
   int (*MsgFunc_Money)(const char* pszName, int iSize, void* pbuf);
-  int (*MsgFunc_NVGToggle)(const char* pszName, int iSize, void* pbuf);
   int (*MsgFunc_TeamInfo)(const char* pszName, int iSize, void* pbuf);
 } usermsg_orig_funcs_t;
 
@@ -67,20 +66,6 @@ static int MsgFunc_Money(const char* pszName, int iSize, void* pbuf) {
   return gUsermsgOrigFuncs.MsgFunc_Money(pszName, iSize, pbuf);
 }
 
-static int MsgFunc_NVGToggle(const char* pszName, int iSize, void* pbuf) {
-  parsemsg.BEGIN_READ(pbuf, iSize);
-
-  Nvg_OnToggle(parsemsg.READ_BYTE());
-
-  return gUsermsgOrigFuncs.MsgFunc_NVGToggle(pszName, iSize, pbuf);
-}
-
-static void SendNvgToggle(int iEnabled) {
-  unsigned char enabled = iEnabled;
-
-  MsgFunc_NVGToggle("NVGToggle", sizeof(enabled), &enabled);
-}
-
 static int MsgFunc_TeamInfo(const char* pszName, int iSize, void* pbuf) {
   parsemsg.BEGIN_READ(pbuf, iSize);
 
@@ -110,12 +95,6 @@ static int pfnHookUserMsg(char* szMsgName, int (*pfn)(const char*, int, void*)) 
     gUsermsgOrigFuncs.MsgFunc_Money = pfn;
 
     return gEnginefuncs.pfnHookUserMsg(szMsgName, MsgFunc_Money);
-  }
-
-  if (strcmp(szMsgName, "NVGToggle") == 0) {
-    gUsermsgOrigFuncs.MsgFunc_NVGToggle = pfn;
-
-    return gEnginefuncs.pfnHookUserMsg(szMsgName, MsgFunc_NVGToggle);
   }
 
   if (strcmp(szMsgName, "TeamInfo") == 0) {
@@ -190,7 +169,7 @@ int Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion) {
 
   gEnginefuncs = *pEnginefuncs;
   Auth_Initialize();
-  Nvg_Initialize(clientModule, SendNvgToggle);
+  Nvg_Initialize(clientModule);
   Crosshair_Initialize(clientModule);
   Chat_Initialize(clientModule);
   Intermission_Initialize();

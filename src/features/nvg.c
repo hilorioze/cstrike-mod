@@ -8,9 +8,7 @@
 #include "loader.h"
 
 static bool g_bServerHasNightVision;
-static bool g_bNightVisionOn;
-static void (*g_pfnSendToggle)(int iEnabled);
-static int* g_pNvgAlpha;
+static client_hud_t* g_pHUD;
 
 enum {
   // bumped from the default `Com_RandomLong(750, 800)`
@@ -33,13 +31,9 @@ static void CreateLight(float* origin, float radius, int r, int g, int b, float 
   light->die = gEnginefuncs.GetClientTime() + time;
 }
 
-void Nvg_Initialize(void* clientModule, void (*pfnSendToggle)(int iEnabled)) {
-  client_hud_t* pHUD = RealDlsym(clientModule, "gHUD");
-
+void Nvg_Initialize(void* clientModule) {
   g_bServerHasNightVision = false;
-  g_bNightVisionOn = false;
-  g_pfnSendToggle = pfnSendToggle;
-  g_pNvgAlpha = &pHUD->m_NightVision.m_iAlpha;
+  g_pHUD = RealDlsym(clientModule, "gHUD");
 
   void* createLight = RealDlsym(clientModule, "_Z19EV_HLDM_CreateLightPffiiif");
   if (DobbyHook(createLight, CreateLight, NULL) != 0)
@@ -49,14 +43,10 @@ void Nvg_Initialize(void* clientModule, void (*pfnSendToggle)(int iEnabled)) {
 void Nvg_OnItemStatus(int iItemStatus) {
   bool bServerHasNightVision = (iItemStatus & 1) != 0;  // NOLINT(hicpp-signed-bitwise)
 
-  if (bServerHasNightVision && !g_bServerHasNightVision && g_bNightVisionOn)
-    g_pfnSendToggle(0);
+  if (bServerHasNightVision && !g_bServerHasNightVision)
+    g_pHUD->m_NightVision.m_fOn = 0;
 
   g_bServerHasNightVision = bServerHasNightVision;
-}
-
-void Nvg_OnToggle(int iEnabled) {
-  g_bNightVisionOn = iEnabled != 0;
 }
 
 int Nvg_HandleKeyEvent(int down, const char* pszCurrentBinding) {
@@ -65,7 +55,7 @@ int Nvg_HandleKeyEvent(int down, const char* pszCurrentBinding) {
     return 0;
 
   if (down)
-    g_pfnSendToggle(!g_bNightVisionOn);
+    g_pHUD->m_NightVision.m_fOn = !g_pHUD->m_NightVision.m_fOn;
 
   return 1;
 }
@@ -77,6 +67,7 @@ int Nvg_ShouldSuppressOverlay(int x, int y, int w, int h, int r, int g, int b, i
 
   gEnginefuncs.pfnGetScreenInfo(&screenInfo);
 
-  return g_bNightVisionOn && x == 0 && y == 0 && w == screenInfo.iWidth &&
-         h == screenInfo.iHeight && r == 50 && g == 225 && b == 50 && a == *g_pNvgAlpha;
+  return g_pHUD->m_NightVision.m_fOn && x == 0 && y == 0 && w == screenInfo.iWidth &&
+         h == screenInfo.iHeight && r == 50 && g == 225 && b == 50 &&
+         a == g_pHUD->m_NightVision.m_iAlpha;
 }
