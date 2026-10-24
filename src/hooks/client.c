@@ -14,6 +14,7 @@
 #include "features/chat.h"
 #include "features/crosshair.h"
 #include "features/cstatus.h"
+#include "features/health_warning.h"
 #include "features/intermission.h"
 #include "features/mouse_wheel.h"
 #include "features/nvg.h"
@@ -172,6 +173,7 @@ int Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion) {
   Nvg_Initialize(clientModule);
   Crosshair_Initialize(clientModule);
   Chat_Initialize(clientModule);
+  HealthWarning_Initialize(clientModule);
   Intermission_Initialize();
   MouseWheel_Initialize();
 

@@ -26,6 +26,7 @@ add_library(cstrike_mod SHARED
   src/features/chat.c
   src/features/crosshair.c
   src/features/cstatus.c
+  src/features/health_warning.c
   src/features/intermission.c
   src/features/mouse_wheel.c
   src/features/nvg.c
