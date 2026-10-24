@@ -117,6 +117,42 @@ typedef struct usercmd_s {
   vec3_t impact_position;
 } usercmd_t;
 
+typedef struct ref_params_s {
+  vec3_t vieworg;
+  vec3_t viewangles;
+  vec3_t forward;
+  vec3_t right;
+  vec3_t up;
+  float frametime;
+  float time;
+  int intermission;
+  int paused;
+  int spectator;
+  int onground;
+  int waterlevel;
+  vec3_t simvel;
+  vec3_t simorg;
+  vec3_t viewheight;
+  float idealpitch;
+  vec3_t cl_viewangles;
+  int health;
+  vec3_t crosshairangle;
+  float viewsize;
+  vec3_t punchangle;
+  int maxclients;
+  int viewentity;
+  int playernum;
+  int max_entities;
+  int demoplayback;
+  int hardware;
+  int smoothing;
+  usercmd_t* cmd;
+  struct movevars_s* movevars;
+  int viewport[4];
+  int nextView;
+  int onlyClientDraw;
+} ref_params_t;
+
 struct mplane_s {
   vec3_t normal;
   float dist;

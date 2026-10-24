@@ -19,6 +19,7 @@
 #include "features/mouse_wheel.h"
 #include "features/nvg.h"
 #include "features/player_render.h"
+#include "features/recoil.h"
 #include "features/scoreboard.h"
 #include "globals.h"
 #include "goldsrc/abi.h"
@@ -119,6 +120,10 @@ static const char* PlayerInfo_ValueForKey(int playerNum, const char* key) {
   return Bot_OverridePlayerInfoValue(playerNum, key, value);
 }
 
+// NOLINTNEXTLINE(misc-unused-parameters,bugprone-easily-swappable-parameters)
+static void V_ApplyShake(float* origin, float* angles, float factor) {
+}
+
 static void ResolveParsemsg(void* clientModule) {
   parsemsg.BEGIN_READ = RealDlsym(clientModule, "_Z10BEGIN_READPvi");
   parsemsg.READ_BYTE = RealDlsym(clientModule, "_Z9READ_BYTEv");
@@ -181,6 +186,7 @@ int Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion) {
   pEnginefuncs->pfnFillRGBA = pfnFillRGBA;
   pEnginefuncs->pfnGetPlayerInfo = pfnGetPlayerInfo;
   pEnginefuncs->PlayerInfo_ValueForKey = PlayerInfo_ValueForKey;
+  pEnginefuncs->V_ApplyShake = V_ApplyShake;
 
   pEnginefuncs->pfnAddCommand("cstatus", CStatus_Command);
 
@@ -201,6 +207,10 @@ void CL_CreateMove(float frametime, usercmd_t* cmd, int active) {
     AutoPistol_CreateMove(cmd);
     AutoShotgun_CreateMove(cmd);
   }
+}
+
+void V_CalcRefdef(ref_params_t* params) {
+  Recoil_CalcRefdef(params);
 }
 
 void HUD_PostRunCmd(local_state_t* from, local_state_t* to, usercmd_t* cmd, int runfuncs,

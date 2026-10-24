@@ -37,6 +37,7 @@ static struct {
     {"XSendEvent", NULL, &gClipboardOrigFuncs.XSendEvent, Clipboard_SendEvent},
     {"Initialize", "cstrike/cl_dlls/client.so", &gClientOrigFuncs.Initialize, Initialize},
     {"CL_CreateMove", "cstrike/cl_dlls/client.so", &gClientOrigFuncs.CL_CreateMove, CL_CreateMove},
+    {"V_CalcRefdef", "cstrike/cl_dlls/client.so", &gClientOrigFuncs.V_CalcRefdef, V_CalcRefdef},
     {"HUD_PostRunCmd", "cstrike/cl_dlls/client.so", &gClientOrigFuncs.HUD_PostRunCmd,
      HUD_PostRunCmd},
     {"HUD_AddEntity", "cstrike/cl_dlls/client.so", &gClientOrigFuncs.HUD_AddEntity, HUD_AddEntity},
