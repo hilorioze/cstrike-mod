@@ -9,6 +9,9 @@
 
 static bool g_bServerHasNightVision;
 static client_hud_t* g_pHUD;
+static void (*gResetOriginal)(client_hud_nightvision_t* nightVision);
+static int (*gToggleOriginal)(client_hud_nightvision_t* nightVision, const char* name, int size,
+                              void* buffer);
 
 enum {
   // bumped from the default `Com_RandomLong(750, 800)`
@@ -31,12 +34,39 @@ static void CreateLight(float* origin, float radius, int r, int g, int b, float 
   light->die = gEnginefuncs.GetClientTime() + time;
 }
 
+static void Reset(client_hud_nightvision_t* nightVision) {
+  int enabled = nightVision->m_fOn;
+
+  gResetOriginal(nightVision);
+
+  // the server's `ResetHUD` on every spawn turns night vision off; keep the client toggle and reset
+  // only the alpha
+  if (!g_bServerHasNightVision)
+    nightVision->m_fOn = enabled;
+}
+
+// server toggle messages only apply to server night vision
+static int Toggle(client_hud_nightvision_t* nightVision, const char* name, int size, void* buffer) {
+  if (!g_bServerHasNightVision)
+    return 1;
+
+  return gToggleOriginal(nightVision, name, size, buffer);
+}
+
 void Nvg_Initialize(void* clientModule) {
   g_bServerHasNightVision = false;
   g_pHUD = RealDlsym(clientModule, "gHUD");
 
   void* createLight = RealDlsym(clientModule, "_Z19EV_HLDM_CreateLightPffiiif");
   if (DobbyHook(createLight, CreateLight, NULL) != 0)
+    __builtin_trap();
+
+  void* reset = RealDlsym(clientModule, "_ZN15CHudNightVision5ResetEv");
+  if (DobbyHook(reset, Reset, (void**)&gResetOriginal) != 0)
+    __builtin_trap();
+
+  void* toggle = RealDlsym(clientModule, "_ZN15CHudNightVision17MsgFunc_NVGToggleEPKciPv");
+  if (DobbyHook(toggle, Toggle, (void**)&gToggleOriginal) != 0)
     __builtin_trap();
 }
 
