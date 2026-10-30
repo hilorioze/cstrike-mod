@@ -26,6 +26,7 @@ add_library(cstrike_mod SHARED
   src/features/chat.c
   src/features/crosshair.c
   src/features/cstatus.c
+  src/features/freecam.c
   src/features/health_warning.c
   src/features/intermission.c
   src/features/mouse_wheel.c
@@ -46,4 +47,4 @@ add_library(cstrike_mod SHARED
   # keep-sorted end
 )
 target_include_directories(cstrike_mod PRIVATE src)
-target_link_libraries(cstrike_mod PRIVATE GL dl dobby)
+target_link_libraries(cstrike_mod PRIVATE GL dl dobby m)

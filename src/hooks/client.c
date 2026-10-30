@@ -14,6 +14,7 @@
 #include "features/chat.h"
 #include "features/crosshair.h"
 #include "features/cstatus.h"
+#include "features/freecam.h"
 #include "features/health_warning.h"
 #include "features/intermission.h"
 #include "features/mouse_wheel.h"
@@ -32,6 +33,8 @@ typedef struct {
   int (*MsgFunc_TeamInfo)(const char* pszName, int iSize, void* pbuf);
 } usermsg_orig_funcs_t;
 
+static int gClientIsProxy;
+
 static usermsg_orig_funcs_t gUsermsgOrigFuncs;
 
 static struct {
@@ -40,6 +43,54 @@ static struct {
   int (*READ_LONG)(void);
   const char* (*READ_STRING)(void);
 } parsemsg;
+
+static void (*gKeyDown)(kbutton_t* button);
+
+static struct {
+  const char* name;
+  const char* buttonSymbol;
+  kbutton_t* button;
+  void (*original)(void);
+} gInputCommands[] = {
+    {.name = "+attack", .buttonSymbol = "in_attack"},
+    {.name = "+attack2", .buttonSymbol = "in_attack2"},
+    {.name = "+back", .buttonSymbol = "in_back"},
+    {.name = "+duck", .buttonSymbol = "in_duck"},
+    {.name = "+forward", .buttonSymbol = "in_forward"},
+    {.name = "+jump", .buttonSymbol = "in_jump"},
+    {.name = "+moveleft", .buttonSymbol = "in_moveleft"},
+    {.name = "+moveright", .buttonSymbol = "in_moveright"},
+    {.name = "+use", .buttonSymbol = "in_use"},
+};
+
+static void HandleKeyDown(void) {
+  const char* name = gEnginefuncs.Cmd_Argv(0);
+  for (size_t i = 0; i < sizeof(gInputCommands) / sizeof(gInputCommands[0]); i++) {
+    if (strcmp(name, gInputCommands[i].name) != 0)
+      continue;
+
+    // register the press without the spectator menu, mode switches or target changes
+    if (Freecam_IsEnabled())
+      gKeyDown(gInputCommands[i].button);
+    else
+      gInputCommands[i].original();
+
+    return;
+  }
+}
+
+static int pfnAddCommand(char* name, void (*function)(void)) {
+  for (size_t i = 0; i < sizeof(gInputCommands) / sizeof(gInputCommands[0]); i++) {
+    if (strcmp(name, gInputCommands[i].name) != 0)
+      continue;
+
+    gInputCommands[i].original = function;
+
+    return gEnginefuncs.pfnAddCommand(name, HandleKeyDown);
+  }
+
+  return gEnginefuncs.pfnAddCommand(name, function);
+}
 
 static void pfnFillRGBA(int x, int y, int w, int h, int r, int g, int b, int a) {
   if (Nvg_ShouldSuppressOverlay(x, y, w, h, r, g, b, a))
@@ -134,6 +185,12 @@ static void ResolveParsemsg(void* clientModule) {
     __builtin_trap();
 }
 
+static void ResolveInput(void* clientModule) {
+  gKeyDown = RealDlsym(clientModule, "_Z7KeyDownP9kbutton_s");
+  for (size_t i = 0; i < sizeof(gInputCommands) / sizeof(gInputCommands[0]); i++)
+    gInputCommands[i].button = RealDlsym(clientModule, gInputCommands[i].buttonSymbol);
+}
+
 static int IsCsldrProxy(void* module) {
   const char** pProgramVersion = (const char**)RealDlsym(module, "programVersion");
   if (!pProgramVersion || !*pProgramVersion)
@@ -151,7 +208,8 @@ static void* ResolveClientModule(void) {
   if (!immediateModule)
     __builtin_trap();
 
-  if (!IsCsldrProxy(immediateModule))
+  gClientIsProxy = IsCsldrProxy(immediateModule);
+  if (!gClientIsProxy)
     return immediateModule;
 
   dlclose(immediateModule);
@@ -172,6 +230,7 @@ static void* ResolveClientModule(void) {
 int Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion) {
   void* clientModule = ResolveClientModule();
   ResolveParsemsg(clientModule);
+  ResolveInput(clientModule);
 
   gEnginefuncs = *pEnginefuncs;
   Auth_Initialize();
@@ -181,7 +240,9 @@ int Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion) {
   HealthWarning_Initialize(clientModule);
   Intermission_Initialize();
   MouseWheel_Initialize();
+  Freecam_Initialize();
 
+  pEnginefuncs->pfnAddCommand = pfnAddCommand;
   pEnginefuncs->pfnHookUserMsg = pfnHookUserMsg;
   pEnginefuncs->pfnFillRGBA = pfnFillRGBA;
   pEnginefuncs->pfnGetPlayerInfo = pfnGetPlayerInfo;
@@ -197,7 +258,14 @@ int Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion) {
   return gClientOrigFuncs.Initialize(pEnginefuncs, iVersion);
 }
 
+int HUD_VidInit(void) {
+  Freecam_Reset();
+
+  return gClientOrigFuncs.HUD_VidInit();
+}
+
 void CL_CreateMove(float frametime, usercmd_t* cmd, int active) {
+  Freecam_BeforeCreateMove();
   gClientOrigFuncs.CL_CreateMove(frametime, cmd, active);
 
   // auto-reload tells the player's own attack presses apart, so it sees the command before the
@@ -207,10 +275,24 @@ void CL_CreateMove(float frametime, usercmd_t* cmd, int active) {
     AutoPistol_CreateMove(cmd);
     AutoShotgun_CreateMove(cmd);
   }
+
+  Freecam_CreateMove(frametime, cmd, active);
+}
+
+int CL_IsThirdPerson(void) {
+  // let the engine include the local player and hide the first-person weapon
+  if (Freecam_IsEnabled())
+    return 1;
+
+  return gClientOrigFuncs.CL_IsThirdPerson();
 }
 
 void V_CalcRefdef(ref_params_t* params) {
+  int secondaryView = params->nextView;
   Recoil_CalcRefdef(params);
+
+  if (!secondaryView)
+    Freecam_CalcRefdef(params);
 }
 
 void HUD_PostRunCmd(local_state_t* from, local_state_t* to, usercmd_t* cmd, int runfuncs,
@@ -225,7 +307,23 @@ void HUD_PostRunCmd(local_state_t* from, local_state_t* to, usercmd_t* cmd, int 
 int HUD_AddEntity(int type, cl_entity_t* ent, const char* modelname) {
   PlayerRender_ApplyEntity(type, ent, modelname);
 
-  return gClientOrigFuncs.HUD_AddEntity(type, ent, modelname);
+  int result = gClientOrigFuncs.HUD_AddEntity(type, ent, modelname);
+
+  // a proxy's zero result can mean its own renderer accepted the entity
+  return !gClientIsProxy && Freecam_IsEnabled() ? 1 : result;
+}
+
+int HUD_AddEntityNative(int type, cl_entity_t* ent, const char* modelname) {
+  int result = gClientOrigFuncs.HUD_AddEntityNative(type, ent, modelname);
+
+  // keep the observed player visible when the main view or inset is in-eye
+  return Freecam_IsEnabled() ? 1 : result;
+}
+
+void HUD_DrawNormalTriangles(void) {
+  // keep the spectator overview out of the detached 3d view
+  if (!Freecam_IsEnabled())
+    gClientOrigFuncs.HUD_DrawNormalTriangles();
 }
 
 int HUD_Key_Event(int down, int keynum, const char* pszCurrentBinding) {

@@ -52,6 +52,7 @@ typedef struct event_api_s event_api_t;
 typedef struct event_args_s event_args_t;
 typedef struct IVoiceTweak_s IVoiceTweak_t;
 typedef struct hull_s hull_t;
+typedef struct kbutton_s kbutton_t;
 typedef struct mleaf_s mleaf_t;
 typedef struct medge_s medge_t;
 typedef struct mnode_s mnode_t;
