@@ -22,6 +22,7 @@
 #include "features/player_render.h"
 #include "features/recoil.h"
 #include "features/scoreboard.h"
+#include "features/voice.h"
 #include "globals.h"
 #include "goldsrc/abi.h"
 #include "hooks/client.h"
@@ -241,6 +242,7 @@ int Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion) {
   Intermission_Initialize();
   MouseWheel_Initialize();
   Freecam_Initialize();
+  Voice_Initialize();
 
   pEnginefuncs->pfnAddCommand = pfnAddCommand;
   pEnginefuncs->pfnHookUserMsg = pfnHookUserMsg;
