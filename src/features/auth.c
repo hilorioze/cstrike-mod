@@ -55,33 +55,58 @@ static void Host_WriteConfiguration(void) {
 }
 
 static void GenerateKey(void) {
-  uint8_t random[15];
+  uint8_t random[64];
   if (getrandom(random, sizeof(random), 0) != sizeof(random))
     __builtin_trap();
 
-  // a non-digit makes reunion keep the key as an hdd serial instead of parsing it as a number;
-  // 32 bytes fit every rev format
-  char key[33] = "CS";
+  // copy what real clients send so the key doesn't stand out in the server log: revemu sends its
+  // hdd serial as 64 uppercase base36 characters, while the 32-byte formats get xash3d-fwgs's
+  // shape, 25 lowercase hex digits of an md5 followed by 7 base36 characters its spoofer picks to
+  // steer the steam id; the letters keep reunion treating either as an hdd serial rather than a
+  // number
+  auth_kind_t kind = AuthTicket_FindKind(gAuth->string);
+  size_t hexLength = kind != kAuthInvalid && AuthTicket_GetKeyLimit(kind) == 32 ? 25 : 0;
+  size_t length = hexLength ? 32 : sizeof(random);
+
+  char key[sizeof(random) + 1];
   static const char hex[] = "0123456789abcdef";
-  for (size_t i = 0; i < sizeof(random); i++) {
-    key[2 + 2 * i] = hex[random[i] >> 4U];
-    key[3 + 2 * i] = hex[random[i] & 15U];
-  }
+  static const char base36[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  for (size_t i = 0; i < length; i++)
+    key[i] = i < hexLength ? hex[random[i] & 15U] : base36[random[i] % (sizeof(base36) - 1)];
+  key[length] = '\0';
 
   gEnginefuncs.Cvar_Set("cl_authkey", key);
 }
 
-static void GenerateIdentifier(const cvar_t* variable) {
+static void GenerateVolumeId(void) {
+  uint32_t value;
+  if (getrandom(&value, sizeof(value), 0) != sizeof(value))
+    __builtin_trap();
+
+  // a windows volume serial is a full 32-bit number; reunion masks the top bit itself and treats 0
+  // as pending, so draw all 32 bits and only avoid 0 (the old `& 0x7fffffff | 0x10000` left bit 31
+  // clear and bit 16 set on every id, an obvious tell)
+  if (!value)
+    value = 1;
+
+  char text[11];
+  (void)snprintf(text, sizeof(text), "%u", value);
+  gEnginefuncs.Cvar_Set(gAuthVolumeId->name, text);
+}
+
+static void GenerateAccountId(void) {
   uint32_t random;
   if (getrandom(&random, sizeof(random), 0) != sizeof(random))
     __builtin_trap();
 
-  // 31 bits survive every format's masking; bit 16 keeps the ids above the placeholder ones reunion
-  // turns into `STEAM_ID_PENDING`
-  uint32_t value = (random & 0x7fffffffU) | 0x10000U;
+  // steam account ids are assigned upwards from 1 and currently reach into the ~1.7 billion range;
+  // stay inside that window so the id reads like a real account number and lands above the 0/1234
+  // values avsmp turns into `STEAM_ID_PENDING`
+  uint32_t value = 10000000U + random % 1490000000U;
+
   char text[11];
   (void)snprintf(text, sizeof(text), "%u", value);
-  gEnginefuncs.Cvar_Set(variable->name, text);
+  gEnginefuncs.Cvar_Set(gAuthAccountId->name, text);
 }
 
 static void EnsureIdentity(void) {
@@ -91,11 +116,11 @@ static void EnsureIdentity(void) {
     generated = true;
   }
   if (!gAuthVolumeId->string[0]) {
-    GenerateIdentifier(gAuthVolumeId);
+    GenerateVolumeId();
     generated = true;
   }
   if (!gAuthAccountId->string[0]) {
-    GenerateIdentifier(gAuthAccountId);
+    GenerateAccountId();
     generated = true;
   }
 
@@ -137,8 +162,9 @@ static bool PrepareTicket(void) {
   if (keyLimit) {
     size_t keyLength = strlen(gAuthKey->string);
     if (keyLength == 0 || keyLength > keyLimit) {
-      gEnginefuncs.Con_Printf("%s requires cl_authkey with 1..%zu bytes\n", gAuth->string,
-                              keyLimit);
+      gEnginefuncs.Con_Printf(
+          "%s requires cl_authkey with 1..%zu bytes; auth regenerate makes one for this mode\n",
+          gAuth->string, keyLimit);
 
       return false;
     }
@@ -222,8 +248,8 @@ static void Auth_Command(void) {
   char* argument = gEnginefuncs.Cmd_Argv(1);
   if (strcmp(argument, "regenerate") == 0) {
     GenerateKey();
-    GenerateIdentifier(gAuthVolumeId);
-    GenerateIdentifier(gAuthAccountId);
+    GenerateVolumeId();
+    GenerateAccountId();
     Host_WriteConfiguration();
     PrintStatus();
 
