@@ -34,6 +34,7 @@ static const server_endpoint_t kCustomModelServers[] = {
 // servers supporting the `/buyammo` chat command
 static const server_endpoint_t kBuyAmmoServers[] = {
     {{46, 174, 52, 2}, 27256},
+    {{204, 168, 182, 190}, 27256},
 };
 
 static const server_profile_t kServerProfiles[] = {
