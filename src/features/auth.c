@@ -21,16 +21,38 @@ static cvar_t* gAuth;
 static cvar_t* gAuthKey;
 static cvar_t* gAuthVolumeId;
 static cvar_t* gAuthAccountId;
+static const qboolean* gHostInitialized;
+static void* (*gOpenPathId)(const char* path, const char* mode, const char* pathId);
+static int (*gFilePrintf)(void* file, const char* format, ...);
+static void (*gCloseFile)(void* file);
+static void (*gWriteConfigurationOriginal)(void);
 static auth_ticket_config_t gTicketConfig;
 static bool gNativeConnection;
 static uint32_t gNativeIp;
 static uint16_t gNativePort;
 static void (*gSendConnectPacketOriginal)(void);
 static void (*gDisconnect)(void);
-static void (*gWriteConfiguration)(void);
 static int (*gInitiateGameConnectionOriginal)(void* ticket, int capacity, uint64_t serverId,
                                               uint32_t ip, uint16_t port, int secure);
 static void (*gTerminateGameConnectionOriginal)(uint32_t ip, uint16_t port);
+
+#define SETTINGS_FORMAT \
+  "cl_auth \"%s\"\ncl_authkey \"%s\"\ncl_auth_volumeid \"%s\"\ncl_auth_accountid \"%s\"\n"
+
+// keep the settings out of `config.cfg`: the engine rewrites it without unregistered cvars, so a
+// game run without the mod would drop the auth mode and identity
+static void Host_WriteConfiguration(void) {
+  gWriteConfigurationOriginal();
+
+  // a shutdown during startup comes before `auth.cfg` runs and would overwrite it with the defaults
+  if (!*gHostInitialized)
+    return;
+
+  void* file = gOpenPathId("auth.cfg", "w", "GAMECONFIG");
+  gFilePrintf(file, SETTINGS_FORMAT, gAuth->string, gAuthKey->string, gAuthVolumeId->string,
+              gAuthAccountId->string);
+  gCloseFile(file);
+}
 
 static void GenerateKey(void) {
   uint8_t random[15];
@@ -78,7 +100,7 @@ static void EnsureIdentity(void) {
   }
 
   if (generated)
-    gWriteConfiguration();
+    Host_WriteConfiguration();
 }
 
 static bool ReadIdentifier(const cvar_t* variable, uint32_t* result) {
@@ -181,9 +203,8 @@ static void Steam_GSTerminateGameConnection(uint32_t ip, uint16_t port) {
 }
 
 static void PrintStatus(void) {
-  gEnginefuncs.Con_Printf(
-      "cl_auth \"%s\"\ncl_authkey \"%s\"\ncl_auth_volumeid \"%s\"\ncl_auth_accountid \"%s\"\n",
-      gAuth->string, gAuthKey->string, gAuthVolumeId->string, gAuthAccountId->string);
+  gEnginefuncs.Con_Printf(SETTINGS_FORMAT, gAuth->string, gAuthKey->string, gAuthVolumeId->string,
+                          gAuthAccountId->string);
   gEnginefuncs.Con_Printf("auth <mode> | regenerate\nmodes:");
   for (int i = 0; i < kAuthKindCount; i++)
     gEnginefuncs.Con_Printf(" %s", AuthTicket_GetName((auth_kind_t)i));
@@ -203,7 +224,7 @@ static void Auth_Command(void) {
     GenerateKey();
     GenerateIdentifier(gAuthVolumeId);
     GenerateIdentifier(gAuthAccountId);
-    gWriteConfiguration();
+    Host_WriteConfiguration();
     PrintStatus();
 
     return;
@@ -216,15 +237,16 @@ static void Auth_Command(void) {
   }
 
   gEnginefuncs.Cvar_Set("cl_auth", argument);
-  gWriteConfiguration();
+  Host_WriteConfiguration();
   gEnginefuncs.Con_Printf("auth: %s\n", gAuth->string);
 }
 
 void Auth_Initialize(void) {
-  gAuth = gEnginefuncs.pfnRegisterVariable("cl_auth", "steam", FCVAR_ARCHIVE);
-  gAuthKey = gEnginefuncs.pfnRegisterVariable("cl_authkey", "", FCVAR_ARCHIVE);
-  gAuthVolumeId = gEnginefuncs.pfnRegisterVariable("cl_auth_volumeid", "", FCVAR_ARCHIVE);
-  gAuthAccountId = gEnginefuncs.pfnRegisterVariable("cl_auth_accountid", "", FCVAR_ARCHIVE);
+  // no default mode: connecting without a chosen one fails instead of exposing the steam account
+  gAuth = gEnginefuncs.pfnRegisterVariable("cl_auth", "", 0);
+  gAuthKey = gEnginefuncs.pfnRegisterVariable("cl_authkey", "", 0);
+  gAuthVolumeId = gEnginefuncs.pfnRegisterVariable("cl_auth_volumeid", "", 0);
+  gAuthAccountId = gEnginefuncs.pfnRegisterVariable("cl_auth_accountid", "", 0);
   gEnginefuncs.pfnAddCommand("auth", Auth_Command);
 
   Dl_info engineInfo;
@@ -238,17 +260,29 @@ void Auth_Initialize(void) {
   void* sendConnectPacket = RealDlsym(engineModule, "CL_SendConnectPacket");
   void* initiateGameConnection = RealDlsym(engineModule, "Steam_GSInitiateGameConnection");
   void* terminateGameConnection = RealDlsym(engineModule, "Steam_GSTerminateGameConnection");
+  void* writeConfiguration = RealDlsym(engineModule, "Host_WriteConfiguration");
+  void (*addText)(const char* text) = RealDlsym(engineModule, "Cbuf_AddText");
   gDisconnect = RealDlsym(engineModule, "CL_Disconnect");
-  gWriteConfiguration = RealDlsym(engineModule, "Host_WriteConfiguration");
-  if (!sendConnectPacket || !initiateGameConnection || !terminateGameConnection || !gDisconnect ||
-      !gWriteConfiguration)
+  gHostInitialized = RealDlsym(engineModule, "host_initialized");
+  gOpenPathId = RealDlsym(engineModule, "FS_OpenPathID");
+  gFilePrintf = RealDlsym(engineModule, "FS_FPrintf");
+  gCloseFile = RealDlsym(engineModule, "FS_Close");
+  if (!sendConnectPacket || !initiateGameConnection || !terminateGameConnection ||
+      !writeConfiguration || !addText || !gDisconnect || !gHostInitialized || !gOpenPathId ||
+      !gFilePrintf || !gCloseFile)
     __builtin_trap();
+
+  addText("exec auth.cfg\n");
 
   if (DobbyHook(sendConnectPacket, CL_SendConnectPacket, (void**)&gSendConnectPacketOriginal) != 0)
     __builtin_trap();
 
   if (DobbyHook(initiateGameConnection, Steam_GSInitiateGameConnection,
                 (void**)&gInitiateGameConnectionOriginal) != 0)
+    __builtin_trap();
+
+  if (DobbyHook(writeConfiguration, Host_WriteConfiguration,
+                (void**)&gWriteConfigurationOriginal) != 0)
     __builtin_trap();
 
   if (DobbyHook(terminateGameConnection, Steam_GSTerminateGameConnection,
