@@ -20,7 +20,6 @@
 #include "features/mouse_wheel.h"
 #include "features/nvg.h"
 #include "features/player_render.h"
-#include "features/recoil.h"
 #include "features/scoreboard.h"
 #include "features/voice.h"
 #include "globals.h"
@@ -291,7 +290,7 @@ int CL_IsThirdPerson(void) {
 
 void V_CalcRefdef(ref_params_t* params) {
   int secondaryView = params->nextView;
-  Recoil_CalcRefdef(params);
+  gClientOrigFuncs.V_CalcRefdef(params);
 
   if (!secondaryView)
     Freecam_CalcRefdef(params);

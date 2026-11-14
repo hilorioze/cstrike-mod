@@ -32,7 +32,6 @@ add_library(cstrike_mod SHARED
   src/features/mouse_wheel.c
   src/features/nvg.c
   src/features/player_render.c
-  src/features/recoil.c
   src/features/scoreboard.c
   src/features/voice.c
   src/globals.c
