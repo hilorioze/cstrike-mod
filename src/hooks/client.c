@@ -14,6 +14,7 @@
 #include "features/chat.h"
 #include "features/crosshair.h"
 #include "features/cstatus.h"
+#include "features/cuserinfo.h"
 #include "features/freecam.h"
 #include "features/health_warning.h"
 #include "features/intermission.h"
@@ -251,6 +252,7 @@ int Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion) {
   pEnginefuncs->V_ApplyShake = V_ApplyShake;
 
   pEnginefuncs->pfnAddCommand("cstatus", CStatus_Command);
+  pEnginefuncs->pfnAddCommand("cuserinfo", CUserinfo_Command);
 
   Scoreboard_Initialize(clientModule);
 
