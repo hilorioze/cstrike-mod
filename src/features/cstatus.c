@@ -12,8 +12,10 @@ void CStatus_Command(void) {
   gEnginefuncs.Con_Printf(
       "----------------------------------------------------"
       "------------------------------------------------\n");
-  gEnginefuncs.Con_Printf(" #  %-20.20s %-20.20s %-5s %-5s %-10s %-8s %-10s\n", "name", "steamid",
-                          "ping", "loss", "team", "state", "model");
+  // the name goes last: the console font has no cyrillic or cjk, and their fallback glyphs aren't
+  // monospace, so nothing after a name would stay aligned
+  gEnginefuncs.Con_Printf(" #  %-23s %-5s %-5s %-10s %-6s %-20s %s\n", "steamid", "ping", "loss",
+                          "team", "state", "model", "name");
   gEnginefuncs.Con_Printf(
       "----------------------------------------------------"
       "------------------------------------------------\n");
@@ -61,9 +63,9 @@ void CStatus_Command(void) {
 
     const char* pszUserModel = gEnginefuncs.PlayerInfo_ValueForKey(i, "model");
 
-    gEnginefuncs.Con_Printf("%2d  %-20.20s %-20.20s %-5d %-5d %-10s %-8s %-10s\n", i,
-                            pszDisplayName, szSteamId, playerInfo.ping, playerInfo.packetloss,
-                            pszTeamStr, pszDeadStr, pszUserModel ? pszUserModel : "");
+    gEnginefuncs.Con_Printf("%2d  %-23s %-5d %-5d %-10s %-6s %-20s %s\n", i, szSteamId,
+                            playerInfo.ping, playerInfo.packetloss, pszTeamStr, pszDeadStr,
+                            pszUserModel ? pszUserModel : "", pszDisplayName);
   }
 
   gEnginefuncs.Con_Printf(
