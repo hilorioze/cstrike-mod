@@ -151,6 +151,14 @@ enum {
   MOVETYPE_PUSHSTEP = 13,
 };
 
+enum {
+  SOLID_NOT = 0,
+  SOLID_TRIGGER = 1,
+  SOLID_BBOX = 2,
+  SOLID_SLIDEBOX = 3,
+  SOLID_BSP = 4,
+};
+
 typedef struct usercmd_s {
   short lerp_msec;
   byte msec;

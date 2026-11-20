@@ -21,6 +21,7 @@
 #include "features/intermission.h"
 #include "features/mouse_wheel.h"
 #include "features/nvg.h"
+#include "features/passable_brush.h"
 #include "features/player_render.h"
 #include "features/scoreboard.h"
 #include "features/voice.h"
@@ -312,6 +313,7 @@ void HUD_PostRunCmd(local_state_t* from, local_state_t* to, usercmd_t* cmd, int 
 
 int HUD_AddEntity(int type, cl_entity_t* ent, const char* modelname) {
   PlayerRender_ApplyEntity(type, ent, modelname);
+  PassableBrush_ApplyEntity(ent);
 
   int result = gClientOrigFuncs.HUD_AddEntity(type, ent, modelname);
 

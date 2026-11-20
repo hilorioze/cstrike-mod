@@ -33,6 +33,7 @@ add_library(cstrike_mod SHARED
   src/features/intermission.c
   src/features/mouse_wheel.c
   src/features/nvg.c
+  src/features/passable_brush.c
   src/features/player_render.c
   src/features/scoreboard.c
   src/features/voice.c
