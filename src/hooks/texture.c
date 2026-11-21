@@ -2,6 +2,8 @@
 
 #include <dlfcn.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "goldsrc/abi.h"
@@ -10,6 +12,12 @@
 enum {
   // `GL_LoadTexture2` stops the game when it needs a new slot with this many in use
   kTextureLimit = 4799,
+
+  // `GL_LoadTexture2` stores this many characters of an identifier but looks textures up by the
+  // whole one
+  kIdentifierLength = sizeof(((gltexture_t*)0)->identifier) - 1,
+  kIdentifierHashDigits = 8,
+  kIdentifierPrefixLength = kIdentifierLength - kIdentifierHashDigits,
 };
 
 static int (*real_GL_LoadTexture2)(char* identifier, int textureType, int width, int height,
@@ -44,9 +52,34 @@ static bool HasFreeTexture(void) {
   return false;
 }
 
+// fnv-1a
+static uint32_t HashIdentifier(const char* identifier) {
+  uint32_t hash = 2166136261U;
+  for (; *identifier; identifier++)
+    hash = (hash ^ (uint8_t)*identifier) * 16777619U;
+
+  return hash;
+}
+
+// a truncated identifier never matches the full one again, so every reload of a model whose cache
+// was evicted takes new slots; keep the beginning and replace the rest with a hash of the whole
+// identifier
+static char* FitIdentifier(char* identifier, char fitted[kIdentifierLength + 1]) {
+  if (strlen(identifier) <= kIdentifierLength)
+    return identifier;
+
+  snprintf(fitted, kIdentifierLength + 1, "%.*s%08x", kIdentifierPrefixLength, identifier,
+           HashIdentifier(identifier));
+
+  return fitted;
+}
+
 // studio textures are named `<model><texture>`, sprite frames `<model>_<frame>`
 static bool IsModelTexture(const model_t* model, const char* identifier) {
   size_t length = strlen(model->name);
+  if (length > kIdentifierPrefixLength)  // the hash replaced the rest of the model name
+    return strncmp(identifier, model->name, kIdentifierPrefixLength) == 0;
+
   if (strncmp(identifier, model->name, length) != 0)
     return false;
 
@@ -96,6 +129,18 @@ int GL_LoadTexture2(char* identifier, int textureType, int width, int height, un
   if (*gNumTextures >= kTextureLimit && !HasFreeTexture())
     FreeOrphanedTextures();
 
-  return real_GL_LoadTexture2(identifier, textureType, width, height, data, mipmap, iType, pPal,
-                              filter);
+  char fitted[kIdentifierLength + 1];
+  return real_GL_LoadTexture2(FitIdentifier(identifier, fitted), textureType, width, height, data,
+                              mipmap, iType, pPal, filter);
+}
+
+// `Mod_UnloadSpriteTextures` unloads sprite frames by their full identifiers
+__attribute__((visibility("default"))) void GL_UnloadTexture(char* identifier);
+
+void GL_UnloadTexture(char* identifier) {
+  if (!real_GL_UnloadTexture)
+    ResolveEngine(__builtin_return_address(0));
+
+  char fitted[kIdentifierLength + 1];
+  real_GL_UnloadTexture(FitIdentifier(identifier, fitted));
 }
