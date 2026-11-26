@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <dirent.h>
 #include <dlfcn.h>
+#include <libgen.h>
 #include <limits.h>
 #include <pthread.h>
 #include <stdbool.h>
@@ -42,6 +43,8 @@ static FILE* (*real_FS_fopen)(void* filesystem, const char* path, const char* mo
 static pthread_mutex_t gLock = PTHREAD_MUTEX_INITIALIZER;
 static char gSteamPath[PATH_MAX + 1];
 static size_t gSteamPathLength;
+static char gGamePath[PATH_MAX + 1];
+static size_t gGamePathLength;
 static int gNotify;
 static directory_t* gDirectories[kDirectoryBuckets];
 
@@ -168,7 +171,8 @@ static bool ResolveComponent(char* path, size_t begin) {
 }
 
 // the engine's `pathmatch`: keep the spelling of the steam path, lowercase the rest, then find the
-// existing spelling of every component
+// existing spelling of every component; the game directory keeps its spelling too, since the
+// sandbox hides the listings above it from a game outside the steam path
 static bool ResolveCase(const char* path, char* resolved) {
   pthread_mutex_lock(&gLock);
 
@@ -180,6 +184,10 @@ static bool ResolveCase(const char* path, char* resolved) {
     gSteamPathLength = snprintf(gSteamPath, sizeof(gSteamPath), "%s/", steamPath);
     free(steamPath);
 
+    char* executable = realpath("/proc/self/exe", NULL);
+    gGamePathLength = snprintf(gGamePath, sizeof(gGamePath), "%s/", dirname(executable));
+    free(executable);
+
     gNotify = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
   }
 
@@ -188,7 +196,10 @@ static bool ResolveCase(const char* path, char* resolved) {
   strcpy(resolved, path);
 
   size_t begin = resolved[0] == '/';
-  if (strncasecmp(resolved, gSteamPath, gSteamPathLength) == 0) {
+  if (strncasecmp(resolved, gGamePath, gGamePathLength) == 0) {
+    memcpy(resolved, gGamePath, gGamePathLength);
+    begin = gGamePathLength;
+  } else if (strncasecmp(resolved, gSteamPath, gSteamPathLength) == 0) {
     memcpy(resolved, gSteamPath, gSteamPathLength);
     begin = gSteamPathLength;
   }

@@ -46,6 +46,7 @@ add_library(cstrike_mod SHARED
   src/hooks/studio.c
   src/hooks/texture.c
   src/main.c
+  src/sandbox.c
   src/server.c
   # keep-sorted end
 )
