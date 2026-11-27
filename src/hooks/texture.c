@@ -130,6 +130,7 @@ int GL_LoadTexture2(char* identifier, int textureType, int width, int height, un
     FreeOrphanedTextures();
 
   char fitted[kIdentifierLength + 1];
+
   return real_GL_LoadTexture2(FitIdentifier(identifier, fitted), textureType, width, height, data,
                               mipmap, iType, pPal, filter);
 }

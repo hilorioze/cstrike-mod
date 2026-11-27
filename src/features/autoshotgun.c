@@ -24,6 +24,7 @@ void AutoShotgun_CreateMove(usercmd_t* cmd) {
   // NOLINTNEXTLINE(hicpp-signed-bitwise)
   if (!gShotgun || !(cmd->buttons & IN_ATTACK) || !Server_IsFeatureEnabled(kFeatureAutoShotgun)) {
     gAttackPassed = false;
+
     return;
   }
 

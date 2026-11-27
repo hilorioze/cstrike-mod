@@ -56,6 +56,7 @@ static void RemoveFavorite(ISteamMatchmaking* matchmaking, const char* address) 
     if (strcmp(favoriteAddress, address) == 0) {
       matchmaking->vtable->RemoveFavoriteGame(matchmaking, appID, ip, connPort, queryPort,
                                               k_unFavoriteFlagFavorite);
+
       return;
     }
   }
