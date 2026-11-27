@@ -218,6 +218,19 @@ struct mplane_s {
   byte pad[2];
 };
 
+struct mleaf_s {
+  int contents;
+  int visframe;
+  float minmaxs[6];
+  mnode_t* parent;
+  byte* compressed_vis;
+  efrag_t* efrags;
+  msurface_t** firstmarksurface;
+  int nummarksurfaces;
+  int key;
+  byte ambient_sound_level[4];
+};
+
 struct SCREENINFO_s {
   int iSize;
   int iWidth;

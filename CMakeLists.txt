@@ -45,6 +45,7 @@ add_library(cstrike_mod SHARED
   src/hooks/serverbrowser.c
   src/hooks/studio.c
   src/hooks/texture.c
+  src/hooks/visibility.c
   src/main.c
   src/sandbox.c
   src/server.c
