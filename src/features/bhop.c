@@ -1,4 +1,4 @@
-#include "cstrike/abi.h"
+#include "cstrike/player_state.h"
 #include "features/bhop.h"
 #include "goldsrc/abi.h"
 #include "server.h"
@@ -10,8 +10,8 @@ void Bhop_OnPostRunCmd(const local_state_t* to) {
   bool onGround = to->client.flags & FL_ONGROUND;  // NOLINT(hicpp-signed-bitwise)
 
   // swimming and ladders need jump held, so only airborne walking releases it
-  gReleaseJump = to->client.health > 0 && to->client.iuser1 == OBS_NONE && !onGround &&
-                 to->client.waterlevel < 2 && to->playerstate.movetype == MOVETYPE_WALK;
+  gReleaseJump = PlayerState_IsAlive(to) && !onGround && to->client.waterlevel < 2 &&
+                 to->playerstate.movetype == MOVETYPE_WALK;
 }
 
 void Bhop_CreateMove(usercmd_t* cmd) {

@@ -28,8 +28,11 @@ void PlayerState_SetTeamFromName(int iPlayer, const char* pszTeamName) {
     PlayerState_SetTeam(iPlayer, TEAM_UNASSIGNED);
 }
 
+bool PlayerState_IsAlive(const local_state_t* state) {
+  return state->client.health > 0 && state->client.iuser1 == OBS_NONE;
+}
+
 bool PlayerState_IsWeaponPredicted(const local_state_t* state) {
   // the client predicts weapons only for a living, non-spectating local player with `cl_lw` on
-  return state->client.health > 0 && state->client.iuser1 == OBS_NONE &&
-         gEnginefuncs.pfnGetCvarFloat("cl_lw") != 0;
+  return PlayerState_IsAlive(state) && gEnginefuncs.pfnGetCvarFloat("cl_lw") != 0;
 }

@@ -6,4 +6,5 @@
 
 int PlayerState_GetTeam(int iPlayer);
 void PlayerState_SetTeamFromName(int iPlayer, const char* pszTeamName);
+bool PlayerState_IsAlive(const local_state_t* state);
 bool PlayerState_IsWeaponPredicted(const local_state_t* state);
