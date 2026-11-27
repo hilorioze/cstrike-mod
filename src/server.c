@@ -11,7 +11,7 @@ enum {
   kDefaultFeatures = kFeatureModelIndex | kFeaturePlayerTransparency | kFeaturePalletTransparency |
                      kFeatureAutoReload | kFeatureAutoPistol | kFeatureHideServer |
                      kFeatureAutoShotgun | kFeatureBhop | kFeaturePassableBrushTransparency |
-                     kFeatureAutoUse,
+                     kFeatureAutoUse | kFeatureAutoFlashlight,
 };
 
 typedef struct {

@@ -6,6 +6,7 @@
 
 #include "cstrike/player_state.h"
 #include "features/auth.h"
+#include "features/autoflashlight.h"
 #include "features/autopistol.h"
 #include "features/autoreload.h"
 #include "features/autoshotgun.h"
@@ -243,6 +244,7 @@ int Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion) {
   Chat_Initialize(clientModule);
   HealthWarning_Initialize(clientModule);
   Intermission_Initialize();
+  AutoFlashlight_Initialize();
   MouseWheel_Initialize();
   Freecam_Initialize();
   Voice_Initialize();
@@ -282,6 +284,7 @@ void CL_CreateMove(float frametime, usercmd_t* cmd, int active) {
     AutoShotgun_CreateMove(cmd);
     Bhop_CreateMove(cmd);
     AutoUse_CreateMove(cmd);
+    AutoFlashlight_CreateMove(cmd);
   }
 
   Freecam_CreateMove(frametime, cmd, active);
@@ -312,6 +315,7 @@ void HUD_PostRunCmd(local_state_t* from, local_state_t* to, usercmd_t* cmd, int 
   AutoShotgun_OnPostRunCmd(to);
   Bhop_OnPostRunCmd(to);
   AutoUse_OnPostRunCmd(to);
+  AutoFlashlight_OnPostRunCmd(to);
 }
 
 int HUD_AddEntity(int type, cl_entity_t* ent, const char* modelname) {
@@ -338,6 +342,8 @@ void HUD_DrawNormalTriangles(void) {
 }
 
 int HUD_Key_Event(int down, int keynum, const char* pszCurrentBinding) {
+  AutoFlashlight_HandleKeyEvent(down, keynum, pszCurrentBinding);
+
   if (Nvg_HandleKeyEvent(down, pszCurrentBinding))
     return 0;
 

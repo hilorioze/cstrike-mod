@@ -18,6 +18,7 @@ add_library(cstrike_mod SHARED
   src/codepatch.c
   src/cstrike/player_state.c
   src/features/auth.c
+  src/features/autoflashlight.c
   src/features/autopistol.c
   src/features/autoreload.c
   src/features/autoshotgun.c
