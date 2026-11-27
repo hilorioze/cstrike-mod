@@ -13,6 +13,7 @@ typedef enum {
   kFeatureAutoShotgun = 1U << 7U,
   kFeatureBhop = 1U << 8U,
   kFeaturePassableBrushTransparency = 1U << 9U,
+  kFeatureAutoUse = 1U << 10U,
 } server_feature_t;
 
 int Server_IsFeatureEnabled(server_feature_t feature);

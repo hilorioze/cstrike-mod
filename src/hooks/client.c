@@ -9,6 +9,7 @@
 #include "features/autopistol.h"
 #include "features/autoreload.h"
 #include "features/autoshotgun.h"
+#include "features/autouse.h"
 #include "features/bhop.h"
 #include "features/bot.h"
 #include "features/buyammo.h"
@@ -280,6 +281,7 @@ void CL_CreateMove(float frametime, usercmd_t* cmd, int active) {
     AutoPistol_CreateMove(cmd);
     AutoShotgun_CreateMove(cmd);
     Bhop_CreateMove(cmd);
+    AutoUse_CreateMove(cmd);
   }
 
   Freecam_CreateMove(frametime, cmd, active);
@@ -309,6 +311,7 @@ void HUD_PostRunCmd(local_state_t* from, local_state_t* to, usercmd_t* cmd, int 
   AutoReload_OnPostRunCmd(to);
   AutoShotgun_OnPostRunCmd(to);
   Bhop_OnPostRunCmd(to);
+  AutoUse_OnPostRunCmd(to);
 }
 
 int HUD_AddEntity(int type, cl_entity_t* ent, const char* modelname) {
